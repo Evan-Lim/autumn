@@ -1,0 +1,750 @@
+/* ==========================================================================
+   autumn // MATERIAL DESIGN 3 (M3) SHARP TONAL SYSTEM, ULTRA-LIGHT INTER
+   TYPOGRAPHY (200-400) & ULTRA-WIDE ABOVE-THE-FOLD DASHBOARD ARCHITECTURE
+   - Strictly 0px border-radius everywhere (no rounded corners)
+   - Ultra-Light Inter font hierarchy (200 ExtraLight / 300 Light body, 400 Regular headers & KPIs)
+   - Minimal 1px hairline wireframe schematic SVGs (zero emojis)
+   - Streamlined 3-tier top command header + compact 4th-navbar-style strips
+   - Ultra-wide (1920px) high-density dashboard layout
+   ========================================================================== */
+
+:root {
+  /* Material 3 Sharp Tonal Surface Hierarchy (Default Light Technical Palette) */
+  --md-surface-dim: #dcebe2;
+  --md-surface: #e8f3ec;
+  --md-surface-bright: #ffffff;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f4fbf7;
+  --md-surface-container: #eff8f2;
+  --md-surface-container-high: #e2efe8;
+  --md-surface-container-highest: #d5e6dc;
+
+  --md-primary: #047857;
+  --md-primary-bright: #10b981;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #dcfce7;
+  --md-on-primary-container: #064e3b;
+
+  --md-secondary: #0369a1;
+  --md-secondary-container: #e0f2fe;
+  --md-on-secondary-container: #0c4a6e;
+
+  --md-tertiary: #b45309;
+  --md-tertiary-container: #fef3c7;
+  --md-on-tertiary-container: #78350f;
+
+  --md-error: #b91c1c;
+  --md-error-container: #fee2e2;
+  --md-on-error-container: #7f1d1d;
+
+  --md-outline: #87b39b;
+  --md-outline-variant: #c5ded0;
+
+  /* M3 Interactive State Layers */
+  --md-state-hover: rgba(4, 120, 87, 0.08);
+  --md-state-focus: rgba(4, 120, 87, 0.14);
+  --md-state-pressed: rgba(4, 120, 87, 0.18);
+
+  /* Inter Font System Tokens (Ultra-Light 200-300 Body, Regular 400 Headers & KPIs) */
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-inter-features-ui: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
+  --font-inter-features-tnum: "tnum" 1, "zero" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
+}
+
+/* Dark Theme M3 Surface Overrides */
+html[data-theme="m3-dark"] {
+  color-scheme: dark;
+  --bg-base: #0b1210;
+  --bg-panel: #111b17;
+  --bg-subtle: #16231e;
+  --bg-elevated: #1b2a24;
+  --text-main: #e2ede7;
+  --text-muted: #9cb5a8;
+  --text-dim: #738f80;
+  --border-main: #243830;
+  --border-strong: #39574b;
+  --emerald-500: #34d399;
+  --emerald-600: #10b981;
+  --emerald-700: #6ee7b7;
+  --emerald-bg: #103326;
+  --emerald-border: #1e5942;
+  --blue-600: #7dd3fc;
+  --blue-bg: #102a3b;
+  --blue-border: #0284c7;
+  --amber-500: #fbbf24;
+  --amber-600: #fcd34d;
+  --amber-bg: #2e220a;
+  --amber-border: #92400e;
+  --ok: #34d399; --ok-bg: #103326; --ok-border: #1e5942;
+  --warn: #fbbf24; --warn-bg: #2e220a; --warn-border: #92400e;
+  --bad: #f87171; --bad-bg: #361515; --bad-border: #991b1b;
+  --info: #7dd3fc; --info-bg: #102a3b; --info-border: #0284c7;
+  --md-state-hover: rgba(52, 211, 153, 0.10);
+  --md-state-focus: rgba(52, 211, 153, 0.16);
+}
+
+/* ==========================================================================
+   1. STRICT ZERO-RADIUS GEOMETRY (NO ROUNDED CORNERS ANYWHERE)
+   ========================================================================== */
+*,
+*::before,
+*::after,
+.cmd-frame,
+.metric-box,
+.btn-chamfer,
+.btn-tech-outline,
+.btn-export-tag,
+.btn-focus-toggle,
+.nav-tab-btn,
+.tech-input,
+.tech-badge,
+.task-status-pill,
+.touch-action-btn,
+.rte-btn,
+.cal-day-box,
+.terminal-header-bar,
+.rounded,
+.rounded-sm,
+.rounded-md,
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl,
+.rounded-full {
+  border-radius: 0px !important;
+}
+
+.btn-chamfer {
+  clip-path: none !important;
+}
+
+/* ==========================================================================
+   2. ULTRA-LIGHT INTER TYPOGRAPHIC SYSTEM (200-300 BODY, 400 HEADERS & KPIS)
+   ========================================================================== */
+html,
+body {
+  font-family: var(--font-inter) !important;
+  font-weight: 300 !important;
+  font-feature-settings: var(--font-inter-features-ui);
+  letter-spacing: -0.008em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Secondary / muted prose & descriptions in ExtraLight 200 to Light 300 */
+p,
+.text-xs,
+.text-\[10px\],
+.text-\[11px\],
+header p,
+aside p,
+.cmd-frame > div > div > p.font-mono-tech {
+  font-family: var(--font-inter) !important;
+  font-weight: 260;
+  letter-spacing: -0.004em;
+}
+
+/* Display, Module Headers & KPIs: Regular 400 (Never thick/heavy bold) */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-inter) !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.02em;
+  font-feature-settings: var(--font-inter-features-ui);
+}
+
+h1 {
+  font-weight: 400 !important;
+  letter-spacing: -0.025em;
+}
+
+/* Remap utility bold classes globally so nothing looks overly thick */
+.font-extrabold,
+.font-bold,
+.font-semibold,
+strong,
+b {
+  font-weight: 400 !important;
+}
+
+.font-medium {
+  font-weight: 300 !important;
+}
+
+/* Technical / Telemetry Class: Inter Light/Regular Tabular Numerals (100% Inter Everywhere) */
+.font-mono-tech,
+.font-mono,
+code,
+pre,
+kbd,
+samp,
+button,
+input,
+select,
+textarea,
+.tech-table,
+.tech-badge,
+.task-status-pill,
+.btn-tech-outline,
+.btn-chamfer,
+.btn-export-tag,
+.btn-focus-toggle,
+.nav-tab-btn,
+.section-tag,
+.subtask-toggle,
+.subtask-rollup,
+.table-export-bar,
+.terminal-drawer-wrap,
+.terminal-textarea,
+.terminal-quick-input,
+.native-doc,
+.native-sheet-table,
+.cal-day-box,
+.timeline-event-card,
+.tnum,
+input[type="number"],
+input[type="date"],
+input[type="time"] {
+  font-family: var(--font-inter) !important;
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: var(--font-inter-features-tnum);
+}
+
+.section-tag {
+  font-family: var(--font-inter) !important;
+  font-weight: 400 !important;
+  font-size: 0.67rem !important;
+  letter-spacing: 0.055em !important;
+  text-transform: uppercase;
+}
+
+/* Minimal 1px Hairline Wireframe Schematic SVG Icon Helper */
+.svg-wire {
+  display: inline-block;
+  vertical-align: -0.14em;
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.svg-wire-sm {
+  width: 10px;
+  height: 10px;
+}
+
+.svg-wire-md {
+  width: 14px;
+  height: 14px;
+}
+
+/* ==========================================================================
+   3. ULTRA-WIDE ABOVE-THE-FOLD DASHBOARD CONTAINER & DENSE GRID SYSTEM
+   ========================================================================== */
+.max-w-\[1440px\] {
+  max-width: 1920px !important;
+  width: 100% !important;
+}
+
+main.max-w-\[1440px\] {
+  padding-top: 0.55rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
+@media (min-width: 1280px) {
+  main.max-w-\[1440px\] {
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
+  }
+}
+
+.cmd-frame {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 1px 2px rgba(12, 31, 23, 0.03);
+  padding: 0.8rem 0.95rem !important;
+}
+
+.cmd-frame > .corner-tl,
+.cmd-frame > .corner-tr,
+.cmd-frame > .corner-bl,
+.cmd-frame > .corner-br {
+  width: 6px;
+  height: 6px;
+  border-color: var(--emerald-600);
+  opacity: 0.55;
+}
+
+.metric-box {
+  padding: 0.6rem 0.75rem !important;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-main);
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.metric-box:hover {
+  border-color: var(--emerald-600);
+}
+
+.metric-box::before {
+  width: 2px;
+}
+
+/* Compact dashboard tables with thin Inter weights & keyboard/inline-edit focus */
+.tech-table th {
+  font-family: var(--font-inter) !important;
+  font-weight: 400 !important;
+  font-size: 0.65rem;
+  letter-spacing: 0.055em;
+  padding: 0.36rem 0.5rem;
+  background: var(--bg-subtle);
+}
+
+.tech-table td {
+  font-family: var(--font-inter) !important;
+  font-weight: 300 !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  padding: 0.34rem 0.5rem;
+}
+
+.tech-table tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+.tech-table tbody tr:hover,
+.tech-table tbody tr:focus-visible {
+  background-color: var(--md-state-hover);
+  outline: none;
+}
+
+.tech-table tbody tr.ledger-row-focused {
+  background-color: var(--md-state-focus) !important;
+  outline: 1px solid var(--emerald-600);
+}
+
+/* ==========================================================================
+   4. STREAMLINED & UNIFORMIZED 3-TIER TOP COMMAND HEADER
+   ========================================================================== */
+
+header.sticky {
+  background: rgba(244, 251, 247, 0.97) !important;
+  border-bottom: 1px solid var(--border-strong) !important;
+  box-shadow: 0 1px 4px rgba(12, 31, 23, 0.04);
+}
+
+/* LINE 1: Primary Module Navigation Tabs (Most Prominent, Regular 400) */
+.m3-top-nav-strip {
+  align-items: center;
+  gap: 2px;
+  background: var(--md-surface-container-high);
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+}
+
+@media (max-width: 767px) {
+  .m3-top-nav-strip {
+    display: none !important;
+  }
+}
+
+.nav-tab-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 0.85rem !important;
+  font-family: var(--font-inter) !important;
+  font-size: 0.73rem !important;
+  font-weight: 350 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  position: relative;
+}
+
+.nav-tab-btn .tab-idx {
+  font-size: 0.64rem;
+  font-weight: 400 !important;
+  padding: 1px 4px;
+  background: rgba(12, 31, 23, 0.05);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-tab-btn:hover {
+  background: var(--md-state-hover);
+  color: var(--text-main);
+}
+
+.nav-tab-btn.active {
+  background: var(--md-surface-container-lowest) !important;
+  color: var(--emerald-700) !important;
+  font-weight: 400 !important;
+  border-color: var(--border-main) !important;
+  border-bottom: 2px solid var(--emerald-600) !important;
+  box-shadow: 0 1px 2px rgba(12, 31, 23, 0.05);
+}
+
+.nav-tab-btn.active .tab-idx {
+  background: var(--emerald-600);
+  color: #ffffff;
+}
+
+/* LINE 2: Uniform 28px Essential Telemetry & Core Controls Bar */
+.m3-header-line2 {
+  background: var(--md-surface-container);
+  border-top: 1px solid var(--border-main);
+}
+
+.m3-line2-item,
+.m3-header-line2 .btn-tech-outline,
+.m3-header-line2 .btn-focus-toggle,
+.m3-header-line2 .tech-badge {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 0.6rem !important;
+  font-family: var(--font-inter) !important;
+  font-size: 0.69rem !important;
+  font-weight: 350 !important;
+  letter-spacing: 0.02em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.36rem !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+.m3-header-line2 .btn-focus-toggle {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border: 1px solid var(--emerald-600);
+  font-weight: 400 !important;
+}
+
+.m3-header-line2 .btn-focus-toggle:hover {
+  background: #bbf7d0;
+}
+
+.m3-header-line2 .btn-focus-toggle.active {
+  background: #0c1f17 !important;
+  color: #34d399 !important;
+  border-color: #10b981 !important;
+}
+
+/* LINE 3: Uniform 24px Collapsible Radar Bar */
+#navbar-line3-bar {
+  background: var(--md-surface-container-low);
+  border-top: 1px solid var(--border-main);
+}
+
+#navbar-line3-bar .tech-badge,
+#navbar-line3-bar .radar-chip,
+#navbar-line3-bar #write-queue-badge {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 0.5rem !important;
+  font-family: var(--font-inter) !important;
+  font-size: 0.67rem !important;
+  font-weight: 350 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.32rem !important;
+  line-height: 1 !important;
+}
+
+/* ==========================================================================
+   5. COMPACT 4TH-NAVBAR-STYLE STRIPS (COURSE HUB & NEXT-CLASS COMMUTE BAR)
+   - Slightly taller than the 3rd navbar (~34px-38px per row), sleek horizontal
+     command strip at the top of 01 // study and 03 // calendar
+   ========================================================================== */
+.m3-fourth-strip {
+  background: var(--md-surface-container-low);
+  border: 1px solid var(--border-strong);
+  padding: 0.28rem 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.5rem;
+  min-height: 36px;
+}
+
+.m3-course-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  height: 26px;
+  padding: 0 0.45rem;
+  background: var(--md-surface-container-lowest);
+  border: 1px solid var(--border-main);
+  font-family: var(--font-inter);
+  font-size: 0.67rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.m3-course-pill:hover {
+  border-color: var(--emerald-600);
+  background: var(--md-surface-container);
+}
+
+.m3-course-pill.active-course {
+  border-color: var(--emerald-600);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.m3-course-code {
+  font-weight: 400;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+/* Uniform Workspace Buttons & Inputs */
+.btn-chamfer,
+.btn-tech-outline {
+  font-family: var(--font-inter) !important;
+  font-weight: 350 !important;
+  letter-spacing: 0.015em;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.tech-input {
+  font-family: var(--font-inter) !important;
+  font-weight: 300 !important;
+  font-size: 0.78rem;
+}
+
+/* ==========================================================================
+   6. UM 3D ATLAS WALKING & DEPARTURE TELEMETRY STYLES
+   ========================================================================== */
+.um-atlas-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.12rem 0.3rem;
+  min-height: 22px;
+  height: auto;
+  padding: 0.16rem 0.45rem;
+  max-width: 100%;
+  line-height: 1.25;
+  font-family: var(--font-inter);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  font-weight: 350;
+  letter-spacing: 0.015em;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.um-atlas-chip:hover {
+  background: #bae6fd;
+  border-color: #0284c7;
+  color: #0c4a6e;
+}
+
+.um-atlas-chip.leave-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.um-atlas-chip.leave-soon {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.um-atlas-route-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  height: 22px;
+  padding: 0 0.5rem;
+  font-family: var(--font-inter);
+  font-size: 0.65rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #047857;
+  color: #ffffff !important;
+  border: 1px solid #065f46;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.um-atlas-route-btn:hover {
+  background: #065f46;
+}
+
+/* ==========================================================================
+   7. TASK SUB-CHECKLISTS, BATCH BAR & INLINE CELL EDITING STYLES
+   ========================================================================== */
+.task-batch-bar {
+  background: #0c1f17;
+  color: #ecfdf5;
+  border: 1px solid #10b981;
+  padding: 0.45rem 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.task-subcheck-wrap {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.45rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-main);
+}
+
+.task-subcheck-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.15rem 0;
+  font-size: 0.7rem;
+  font-weight: 300;
+}
+
+.inline-ledger-input {
+  height: 22px;
+  padding: 0 0.35rem;
+  font-family: var(--font-inter);
+  font-size: 0.72rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  background: #ffffff;
+  color: #0c1f17;
+  border: 1px solid #047857;
+  outline: none;
+}
+
+/* ==========================================================================
+   8. SPARKLINES & 5x5 CROSS-MODULE CORRELATION MATRIX STYLES
+   ========================================================================== */
+.metric-sparkline-wrap {
+  margin-top: 0.38rem;
+  padding-top: 0.32rem;
+  border-top: 1px dashed var(--border-main);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.corr-cell {
+  font-family: var(--font-inter);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  font-weight: 350;
+  text-align: center;
+  padding: 0.38rem 0.35rem;
+  border: 1px solid var(--border-main);
+}
+
+/* ==========================================================================
+   9. COMPREHENSIVE RESPONSIVE LAYOUT & ZERO-OVERLAP SAFETY (ALL VIEWPORTS)
+   ========================================================================== */
+html, body, main, header {
+  max-width: 100%;
+}
+
+/* Tablet Landscape / Portrait (768px - 1080px): keep Line 1 Brand + Search + 6 Tabs spacious */
+@media (min-width: 768px) and (max-width: 1120px) {
+  .m3-top-nav-strip .tab-idx {
+    display: none;
+  }
+  .m3-top-nav-strip .nav-tab-btn {
+    padding: 0 0.55rem !important;
+    font-size: 0.7rem !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+  #global-search-wrapper {
+    min-width: 130px;
+  }
+}
+
+/* Mobile Viewports (< 640px): Clean wrapping & zero horizontal overflow */
+@media (max-width: 639px) {
+  .cmd-frame {
+    padding: 0.65rem 0.7rem !important;
+  }
+  .m3-header-line2 .m3-line2-item,
+  .m3-header-line2 .btn-tech-outline,
+  .m3-header-line2 .btn-focus-toggle,
+  .m3-header-line2 .tech-badge {
+    height: auto !important;
+    min-height: 26px !important;
+    padding: 0.2rem 0.45rem !important;
+    font-size: 0.65rem !important;
+    max-width: 100%;
+  }
+  #navbar-line3-bar .tech-badge,
+  #navbar-line3-bar .radar-chip,
+  #navbar-line3-bar #write-queue-badge {
+    height: auto !important;
+    min-height: 24px !important;
+    padding: 0.18rem 0.42rem !important;
+    font-size: 0.64rem !important;
+    max-width: 100%;
+  }
+  .um-atlas-chip {
+    height: auto !important;
+    min-height: 22px !important;
+    padding: 0.2rem 0.42rem !important;
+    white-space: normal !important;
+    flex-wrap: wrap;
+    line-height: 1.25;
+  }
+  .m3-course-pill {
+    height: auto !important;
+    min-height: 26px !important;
+    padding: 0.22rem 0.45rem !important;
+    flex-wrap: wrap;
+    white-space: normal !important;
+    line-height: 1.3;
+  }
+  .m3-fourth-strip {
+    padding: 0.35rem 0.45rem;
+  }
+  .terminal-drawer-wrap {
+    right: 0.5rem;
+    width: calc(100vw - 1rem);
+  }
+}
+
+/* Extra-Narrow Phones (<= 400px, e.g. 360px Galaxy / SE) */
+@media (max-width: 400px) {
+  #app-version-chip {
+    display: none;
+  }
+  #mobile-nav-trigger {
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+    font-size: 0.66rem !important;
+  }
+  #global-search-input {
+    font-size: 0.7rem !important;
+  }
+}
