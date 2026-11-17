@@ -1,0 +1,8 @@
+{
+  "name": "autumn // PERSONAL COMMAND LEDGER",
+  "description": "A personal command ledger for study hours, steps, calendar, tasks, habits, runs, notes and study resources.",
+  "requestFramePermissions": [
+    "clipboard-read",
+    "clipboard-write"
+  ]
+}
