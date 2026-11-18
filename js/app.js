@@ -916,6 +916,85 @@
     let lastNonFocusTab = 'study';
     // Guards against the popstate handler re-pushing history when it restores a tab.
     let suppressHistoryPush = false;
+    const __dirtyTabs = new Set();
+    window.__markAutumnTabDirty = function (tab) {
+      if (tab && tab !== activeTabName) __dirtyTabs.add(tab);
+    };
+
+    function isTabActive(tab) {
+      return activeTabName === tab;
+    }
+
+    function ensureChartJsAndRender(targetChart) {
+      if (typeof window.__ensureChartJs !== 'function') return;
+      window.__ensureChartJs().then(() => {
+        if (typeof Chart === 'undefined') return;
+        if ((!targetChart || targetChart === 'study') && activeTabName === 'study') {
+          if (globalStudyRows.length) updateStudyChart(globalStudyRows);
+          if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
+        }
+        if ((!targetChart || targetChart === 'steps') && activeTabName === 'steps') {
+          if (globalStepsRows.length) updateStepsChart(globalStepsRows);
+          if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
+        }
+      }).catch(() => {});
+    }
+
+    let _postLedgerRafId = 0;
+    function schedulePostLedgerPipeline() {
+      if (_postLedgerRafId) return;
+      const run = () => {
+        _postLedgerRafId = 0;
+        if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
+        if (typeof renderPlannerInsights === 'function') renderPlannerInsights();
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        _postLedgerRafId = requestAnimationFrame(run);
+      } else {
+        run();
+      }
+    }
+
+    function flushDirtyTab(tabName) {
+      if (!__dirtyTabs.has(tabName) && tabName !== 'resources' && tabName !== 'focus') return;
+      __dirtyTabs.delete(tabName);
+      if (tabName === 'study') {
+        updateStudyCalendar(globalStudyRows);
+        updateStudyTodayDisplay(globalStudyRows);
+        updateStudyTable(globalStudyRows);
+        updateStudyPredictions(globalStudyRows);
+        updateStudyChart(globalStudyRows);
+        if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
+        if (typeof renderPlannerInsights === 'function') renderPlannerInsights();
+        if (window.umAtlas && typeof window.umAtlas.renderStudyCourseHubStrip === 'function') window.umAtlas.renderStudyCourseHubStrip();
+        if (window.analyticsMatrix && typeof window.analyticsMatrix.refreshAllAnalytics === 'function') window.analyticsMatrix.refreshAllAnalytics();
+      } else if (tabName === 'steps') {
+        updateStepsCalendar(globalStepsRows);
+        updateStepsTodayDisplay(globalStepsRows);
+        updateStepsTable(globalStepsRows);
+        updateStepsPredictions(globalStepsRows);
+        updateStepsChart(globalStepsRows);
+        if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
+        if (window.analyticsMatrix && typeof window.analyticsMatrix.refreshAllAnalytics === 'function') window.analyticsMatrix.refreshAllAnalytics();
+      } else if (tabName === 'calendar') {
+        if (window.umAtlas) {
+          if (typeof window.umAtlas.loadUmSearchIndex === 'function') window.umAtlas.loadUmSearchIndex();
+          if (typeof window.umAtlas.renderCalendarCommuteStrip === 'function') window.umAtlas.renderCalendarCommuteStrip();
+        }
+        renderCalendarViewport();
+      } else if (tabName === 'tasks') {
+        renderTasksBoard();
+      } else if (tabName === 'focus') {
+        if (window.umAtlas && typeof window.umAtlas.loadUmSearchIndex === 'function') window.umAtlas.loadUmSearchIndex();
+        if (typeof updateClock === 'function') updateClock(true);
+        if (typeof renderFocusMode === 'function') renderFocusMode();
+      } else if (tabName === 'resources') {
+        renderYoutubeResources();
+        if (!activeYoutubeResourceId && globalYoutubeResources.length > 0) {
+          loadYoutubeResourceInPlayer(globalYoutubeResources[0].id, false);
+        }
+      }
+    }
 
     function toggleMobileNavMenu(e) {
       if (e) e.stopPropagation();
@@ -1047,15 +1126,36 @@
       }
       closeMobileNavMenu();
 
-      if (tabName === 'study' && studyChartInstance) studyChartInstance.resize();
-      if (tabName === 'steps' && stepsChartInstance) stepsChartInstance.resize();
-      if (tabName === 'calendar') renderCalendarViewport();
-      if (tabName === 'resources' && typeof renderDriveFoldersTree === 'function') renderDriveFoldersTree();
-      if (tabName === 'focus' && typeof renderFocusMode === 'function') renderFocusMode();
+      if (tabName === 'study') {
+        if (__dirtyTabs.has('study')) flushDirtyTab('study');
+        else if (studyChartInstance) studyChartInstance.resize();
+        else ensureChartJsAndRender('study');
+      }
+      if (tabName === 'steps') {
+        if (__dirtyTabs.has('steps')) flushDirtyTab('steps');
+        else if (stepsChartInstance) stepsChartInstance.resize();
+        else ensureChartJsAndRender('steps');
+      }
+      if (tabName === 'calendar') {
+        __dirtyTabs.delete('calendar');
+        if (window.umAtlas) {
+          if (typeof window.umAtlas.loadUmSearchIndex === 'function') window.umAtlas.loadUmSearchIndex();
+          if (typeof window.umAtlas.renderCalendarCommuteStrip === 'function') window.umAtlas.renderCalendarCommuteStrip();
+        }
+        renderCalendarViewport();
+      }
+      if (tabName === 'resources') {
+        if (typeof renderDriveFoldersTree === 'function') renderDriveFoldersTree();
+        flushDirtyTab('resources');
+      }
+      if (tabName === 'focus') {
+        flushDirtyTab('focus');
+      }
 
       // Secondary data now loads in the background after first paint. If the user reaches a
       // tab before that finishes (or before it starts), pull just that module in on demand.
       if (tabName === 'tasks') {
+        if (__dirtyTabs.has('tasks')) flushDirtyTab('tasks');
         if (globalTaskColumns.length === 0) fetchAndRenderTasks();
         if (globalHabits.length === 0) fetchAndRenderHabits();
         if (globalRunningLogs.length === 0) fetchAndRenderRunningLogs();
@@ -1274,14 +1374,21 @@
     // ==========================================
     // 5. LIVE CLOCK & DAY PROGRESS
     // ==========================================
-    function updateClock() {
+    let _lastClockDateStr = '';
+    let _lastClockPctStr = '';
+    let _lastFocusHmStr = '';
+    function updateClock(forceFocusSync) {
       const now = new Date();
-      const options = { year: 'numeric', month: 'short', day: 'numeric' };
-      const dateEl = document.getElementById('current-date');
-      const timeEl = document.getElementById('current-time');
       const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-      if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', options);
-      if (timeEl) timeEl.textContent = timeStr;
+      const timeEl = document.getElementById('current-time');
+      if (timeEl && timeEl.textContent !== timeStr) timeEl.textContent = timeStr;
+
+      const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      if (dateStr !== _lastClockDateStr) {
+        _lastClockDateStr = dateStr;
+        const dateEl = document.getElementById('current-date');
+        if (dateEl) dateEl.textContent = dateStr;
+      }
 
       const hours = now.getHours();
       const mins = now.getMinutes();
@@ -1290,30 +1397,37 @@
       const secondsRemaining = Math.max(0, 86400 - totalSecondsPassed);
       const percentPassed = (totalSecondsPassed / 86400) * 100;
       const percentRemaining = 100 - percentPassed;
+      const remPctStr = `${percentRemaining.toFixed(1)}%`;
 
-      const progEl = document.getElementById('day-progress');
-      const remEl = document.getElementById('day-remaining-text');
-      if (progEl) progEl.style.width = `${percentPassed}%`;
-      if (remEl) remEl.textContent = `${percentRemaining.toFixed(1)}% left`;
+      if (remPctStr !== _lastClockPctStr) {
+        _lastClockPctStr = remPctStr;
+        const progEl = document.getElementById('day-progress');
+        const remEl = document.getElementById('day-remaining-text');
+        if (progEl) progEl.style.width = `${percentPassed.toFixed(2)}%`;
+        if (remEl) remEl.textContent = `${remPctStr} left`;
+      }
 
-      // Sync Focus Mode Live Telemetry Clock & Day Window
-      const focusClockEl = document.getElementById('focus-live-clock');
-      const focusRemPctEl = document.getElementById('focus-day-rem-pct');
-      const focusRemHmEl = document.getElementById('focus-day-rem-hm');
-      const focusRemBarEl = document.getElementById('focus-day-rem-bar');
-      if (focusClockEl) focusClockEl.textContent = timeStr;
-      if (focusRemPctEl) focusRemPctEl.textContent = `${percentRemaining.toFixed(1)}%`;
-      if (focusRemHmEl) {
+      if (activeTabName === 'focus' || forceFocusSync) {
+        const focusClockEl = document.getElementById('focus-live-clock');
+        if (focusClockEl) focusClockEl.textContent = timeStr;
+        const focusRemPctEl = document.getElementById('focus-day-rem-pct');
+        const focusRemBarEl = document.getElementById('focus-day-rem-bar');
+        if (focusRemPctEl && focusRemPctEl.textContent !== remPctStr) focusRemPctEl.textContent = remPctStr;
+        if (focusRemBarEl) focusRemBarEl.style.width = `${percentRemaining.toFixed(2)}%`;
         const remH = Math.floor(secondsRemaining / 3600);
         const remM = Math.floor((secondsRemaining % 3600) / 60);
-        focusRemHmEl.textContent = `${remH}h ${remM}m left until 24:00`;
+        const hmStr = `${remH}h ${remM}m left until 24:00`;
+        if (hmStr !== _lastFocusHmStr || forceFocusSync) {
+          _lastFocusHmStr = hmStr;
+          const focusRemHmEl = document.getElementById('focus-day-rem-hm');
+          if (focusRemHmEl) focusRemHmEl.textContent = hmStr;
+        }
       }
-      if (focusRemBarEl) focusRemBarEl.style.width = `${percentRemaining}%`;
     }
     // Tick only while the tab is visible — browsers throttle background timers anyway, and
     // there is no point repainting a dashboard nobody can see.
-    setInterval(() => { if (!document.hidden) updateClock(); }, 1000);
-    updateClock();
+    setInterval(() => { if (!document.hidden) updateClock(false); }, 1000);
+    updateClock(false);
 
     // ==========================================
     // 6. TAB 1: STUDY LEDGER LOGIC (TESTING PHASE NOW -> RESETS NOV 1 WITH OCT 30–31 CARRYOVER)
@@ -1591,7 +1705,7 @@
       }
     }
 
-    // Renders a study dataset (cached or fresh) through the full pipeline.
+    // Renders a study dataset (cached or fresh) through the full pipeline, gating hidden DOM.
     function applyStudyRows(dbRows) {
       const computedRows = buildComputedLedger(dbRows, {
         baseGoalFn: getStudyBaseGoalForDate,
@@ -1599,13 +1713,16 @@
         valueField: 'actual_hours'
       });
       globalStudyRows = computedRows;
-      updateStudyCalendar(computedRows);
-      updateStudyTodayDisplay(computedRows);
-      updateStudyTable(computedRows);
-      updateStudyPredictions(computedRows);
-      updateStudyChart(computedRows);
-      if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
-      if (typeof renderPlannerInsights === 'function') renderPlannerInsights();
+      if (isTabActive('study')) {
+        updateStudyCalendar(computedRows);
+        updateStudyTodayDisplay(computedRows);
+        updateStudyTable(computedRows);
+        updateStudyPredictions(computedRows);
+        updateStudyChart(computedRows);
+      } else {
+        __dirtyTabs.add('study');
+      }
+      schedulePostLedgerPipeline();
 
       return computedRows;
     }
@@ -1617,13 +1734,16 @@
         valueField: 'actual_steps'
       });
       globalStepsRows = computedRows;
-      updateStepsCalendar(computedRows);
-      updateStepsTodayDisplay(computedRows);
-      updateStepsTable(computedRows);
-      updateStepsPredictions(computedRows);
-      updateStepsChart(computedRows);
-      if (typeof renderAdvancedTelemetryAnalytics === 'function') renderAdvancedTelemetryAnalytics();
-      if (typeof renderPlannerInsights === 'function') renderPlannerInsights();
+      if (isTabActive('steps')) {
+        updateStepsCalendar(computedRows);
+        updateStepsTodayDisplay(computedRows);
+        updateStepsTable(computedRows);
+        updateStepsPredictions(computedRows);
+        updateStepsChart(computedRows);
+      } else {
+        __dirtyTabs.add('steps');
+      }
+      schedulePostLedgerPipeline();
 
       return computedRows;
     }
@@ -1911,6 +2031,7 @@
       // Windowing keeps the DOM small on long phases (see toggleLedgerWindow above).
       const reversedRows = applyLedgerWindow([...activeRows].reverse());
       updateLedgerWindowButtons();
+      const frag = document.createDocumentFragment();
       reversedRows.forEach(row => {
         const tr = document.createElement('tr');
         const isPassUsed = row.source === 'pass_redeemed' || (typeof isPassUsedOnDate === 'function' && isPassUsedOnDate(row.date, 'study'));
@@ -1938,10 +2059,11 @@
           <td>${formatHours(row.computed_target)}</td>
           <td class="flex flex-wrap items-center gap-1">${badgeHtml}</td>
         `;
-        tbody.appendChild(tr);
+        frag.appendChild(tr);
       });
+      tbody.appendChild(frag);
       if (window.umAtlas && typeof window.umAtlas.attachLedgerInlineEditing === 'function') {
-        window.umAtlas.attachLedgerInlineEditing();
+        window.umAtlas.attachLedgerInlineEditing('study');
       }
       if (window.umAtlas && typeof window.umAtlas.renderStudyCourseHubStrip === 'function') {
         window.umAtlas.renderStudyCourseHubStrip();
@@ -1998,8 +2120,18 @@
     }
 
     function updateStudyChart(allRows) {
+      if (!isTabActive('study')) {
+        __dirtyTabs.add('study');
+        return;
+      }
+      if (typeof Chart === 'undefined') {
+        ensureChartJsAndRender('study');
+        return;
+      }
       const rows = getPhaseActiveRows(allRows);
-      const ctx = document.getElementById('studyChart').getContext('2d');
+      const canvas = document.getElementById('studyChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
       const labels = rows.map(r => r.date.slice(5));
 
       const expectedCumulative = [];
@@ -2388,6 +2520,7 @@
       // Windowing keeps the DOM small on long phases (see toggleLedgerWindow above).
       const reversedRows = applyLedgerWindow([...activeRows].reverse());
       updateLedgerWindowButtons();
+      const frag = document.createDocumentFragment();
       reversedRows.forEach(row => {
         const tr = document.createElement('tr');
         const isPassUsed = row.source === 'pass_redeemed' || (typeof isPassUsedOnDate === 'function' && isPassUsedOnDate(row.date, 'steps'));
@@ -2414,10 +2547,11 @@
           <td>${formatSteps(row.computed_target)}</td>
           <td class="flex flex-wrap items-center gap-1">${badgeHtml}</td>
         `;
-        tbody.appendChild(tr);
+        frag.appendChild(tr);
       });
+      tbody.appendChild(frag);
       if (window.umAtlas && typeof window.umAtlas.attachLedgerInlineEditing === 'function') {
-        window.umAtlas.attachLedgerInlineEditing();
+        window.umAtlas.attachLedgerInlineEditing('steps');
       }
     }
 
@@ -2465,8 +2599,18 @@
     }
 
     function updateStepsChart(allRows) {
+      if (!isTabActive('steps')) {
+        __dirtyTabs.add('steps');
+        return;
+      }
+      if (typeof Chart === 'undefined') {
+        ensureChartJsAndRender('steps');
+        return;
+      }
       const rows = getPhaseActiveRows(allRows);
-      const ctx = document.getElementById('stepsChart').getContext('2d');
+      const canvas = document.getElementById('stepsChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
       const labels = rows.map(r => r.date.slice(5));
 
       const expectedCumulative = [];
@@ -3210,6 +3354,9 @@
 
     // Open Event Details Modal for any Event ID
     function openEventDetails(eventId) {
+      if (window.umAtlas && typeof window.umAtlas.loadUmSearchIndex === 'function') {
+        window.umAtlas.loadUmSearchIndex();
+      }
       const ev = globalCalendarEvents.find(e => e.id === eventId);
       if (!ev) return;
 
@@ -3599,6 +3746,10 @@
     }
 
     function renderCalendarViewport() {
+      if (!isTabActive('calendar')) {
+        __dirtyTabs.add('calendar');
+        return;
+      }
       const viewport = document.getElementById('calendar-main-viewport');
       const rangeLabel = document.getElementById('cal-range-label');
       if (!viewport) return;
@@ -5036,6 +5187,20 @@
     }
 
     function renderTasksBoard() {
+      const totalCols = globalTaskColumns.length;
+      const doneCols = globalTaskColumns.filter(c => c.is_done).length;
+      const totalItems = globalTaskItems.length;
+      const doneItems = globalTaskItems.filter(i => i.is_done).length;
+
+      updateNavbarTaskDeadlinesTelemetry();
+      if (typeof renderCalendarViewport === 'function') renderCalendarViewport();
+      if (typeof renderFocusMode === 'function') renderFocusMode();
+
+      if (!isTabActive('tasks')) {
+        __dirtyTabs.add('tasks');
+        return;
+      }
+
       const container = document.getElementById('tasks-columns-container');
       if (!container) return;
       container.innerHTML = '';
@@ -5043,10 +5208,6 @@
       globalTaskColumns = sortTaskColumnsBySavedOrder(globalTaskColumns);
 
       const isOwner = Boolean(currentUser);
-      const totalCols = globalTaskColumns.length;
-      const doneCols = globalTaskColumns.filter(c => c.is_done).length;
-      const totalItems = globalTaskItems.length;
-      const doneItems = globalTaskItems.filter(i => i.is_done).length;
 
       document.getElementById('tasks-col-count').textContent = totalCols;
       document.getElementById('tasks-col-done-count').textContent = doneCols;
@@ -5057,9 +5218,6 @@
       if (window.tasksPower && typeof window.tasksPower.renderBatchMatrixBar === 'function') {
         window.tasksPower.renderBatchMatrixBar();
       }
-      updateNavbarTaskDeadlinesTelemetry();
-      if (typeof renderCalendarViewport === 'function') renderCalendarViewport();
-      if (typeof renderFocusMode === 'function') renderFocusMode();
 
       if (totalCols === 0) {
         container.innerHTML = `
@@ -7531,6 +7689,10 @@
     // updated function
 
     function renderFocusMode() {
+      if (!isTabActive('focus')) {
+        __dirtyTabs.add('focus');
+        return;
+      }
       const now = new Date();
       const todayStr = getLocalDateString(now);
       const isOwner = Boolean(currentUser);
@@ -11072,10 +11234,13 @@
       }
 
       globalYoutubeResources = data || [];
-      renderYoutubeResources();
-
-      if (!activeYoutubeResourceId && globalYoutubeResources.length > 0) {
-        loadYoutubeResourceInPlayer(globalYoutubeResources[0].id, false);
+      if (isTabActive('resources')) {
+        renderYoutubeResources();
+        if (!activeYoutubeResourceId && globalYoutubeResources.length > 0) {
+          loadYoutubeResourceInPlayer(globalYoutubeResources[0].id, false);
+        }
+      } else {
+        __dirtyTabs.add('resources');
       }
     }
 
@@ -13165,48 +13330,60 @@
       if (sHitEl) sHitEl.textContent = `${studyHitRate.toFixed(1)}%`;
       if (sHitSubEl) sHitSubEl.textContent = `${studyOnSpecCount}/${globalStudyRows.length} on-spec • ${halfText}`;
 
-      // Render Study Daily Bar + 7-Day EMA Chart
-      const studyEmaCtx = document.getElementById('studyEmaChart')?.getContext('2d');
+      // Render Study Daily Bar + 7-Day EMA Chart (reuse instance cleanly, skip if tab hidden)
+      const studyEmaCtx = isTabActive('study') ? document.getElementById('studyEmaChart')?.getContext('2d') : null;
       if (studyEmaCtx) {
-        const recentStudyRows = globalStudyRows.slice(-30);
-        const sLabels = recentStudyRows.map(r => r.date.slice(5));
-        const sRaw = recentStudyRows.map(r => r.actual_hours);
-        const sEma = calcEMA(sRaw, 7);
-        if (studyEmaChartInstance) studyEmaChartInstance.destroy();
-        studyEmaChartInstance = new Chart(studyEmaCtx, {
-          type: 'bar',
-          data: {
-            labels: sLabels,
-            datasets: [
-              {
-                type: 'line',
-                label: '7-Day EMA Trend',
-                data: sEma,
-                borderColor: '#f59e0b',
-                borderWidth: 2.5,
-                pointRadius: 0,
-                tension: 0.3
+        if (typeof Chart === 'undefined') {
+          ensureChartJsAndRender('study');
+        } else {
+          const recentStudyRows = globalStudyRows.slice(-30);
+          const sLabels = recentStudyRows.map(r => r.date.slice(5));
+          const sRaw = recentStudyRows.map(r => r.actual_hours);
+          const sEma = calcEMA(sRaw, 7);
+          if (studyEmaChartInstance) {
+            studyEmaChartInstance.data.labels = sLabels;
+            studyEmaChartInstance.data.datasets[0].data = sEma;
+            studyEmaChartInstance.data.datasets[1].data = sRaw;
+            studyEmaChartInstance.update('none');
+          } else {
+            studyEmaChartInstance = new Chart(studyEmaCtx, {
+              type: 'bar',
+              data: {
+                labels: sLabels,
+                datasets: [
+                  {
+                    type: 'line',
+                    label: '7-Day EMA Trend',
+                    data: sEma,
+                    borderColor: '#f59e0b',
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    tension: 0.3
+                  },
+                  {
+                    type: 'bar',
+                    label: 'Daily Study (h)',
+                    data: sRaw,
+                    backgroundColor: 'rgba(16, 185, 129, 0.45)',
+                    borderColor: '#059669',
+                    borderWidth: 1
+                  }
+                ]
               },
-              {
-                type: 'bar',
-                label: 'Daily Study (h)',
-                data: sRaw,
-                backgroundColor: 'rgba(16, 185, 129, 0.45)',
-                borderColor: '#059669',
-                borderWidth: 1
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { font: { family: 'Inter', size: 10 } } } },
+                scales: {
+                  y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 } } },
+                  x: { ticks: { font: { family: 'Inter', size: 9 } } }
+                }
               }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { font: { family: 'Inter', size: 10 } } } },
-            scales: {
-              y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 } } },
-              x: { ticks: { font: { family: 'Inter', size: 9 } } }
-            }
+            });
           }
-        });
+        }
+      } else if (!isTabActive('study')) {
+        __dirtyTabs.add('study');
       }
 
       // 6. Steps Volatility (σ), Hit Rate, Debt Halving & 7D EMA
@@ -13250,47 +13427,59 @@
         }
       }
 
-      const stepsEmaCtx = document.getElementById('stepsEmaChart')?.getContext('2d');
+      const stepsEmaCtx = isTabActive('steps') ? document.getElementById('stepsEmaChart')?.getContext('2d') : null;
       if (stepsEmaCtx) {
-        const recentStepsRows = globalStepsRows.slice(-30);
-        const stLabels = recentStepsRows.map(r => r.date.slice(5));
-        const stRaw = recentStepsRows.map(r => r.actual_steps);
-        const stEma = calcEMA(stRaw, 7);
-        if (stepsEmaChartInstance) stepsEmaChartInstance.destroy();
-        stepsEmaChartInstance = new Chart(stepsEmaCtx, {
-          type: 'bar',
-          data: {
-            labels: stLabels,
-            datasets: [
-              {
-                type: 'line',
-                label: '7-Day EMA Trend',
-                data: stEma,
-                borderColor: '#0284c7',
-                borderWidth: 2.5,
-                pointRadius: 0,
-                tension: 0.3
+        if (typeof Chart === 'undefined') {
+          ensureChartJsAndRender('steps');
+        } else {
+          const recentStepsRows = globalStepsRows.slice(-30);
+          const stLabels = recentStepsRows.map(r => r.date.slice(5));
+          const stRaw = recentStepsRows.map(r => r.actual_steps);
+          const stEma = calcEMA(stRaw, 7);
+          if (stepsEmaChartInstance) {
+            stepsEmaChartInstance.data.labels = stLabels;
+            stepsEmaChartInstance.data.datasets[0].data = stEma;
+            stepsEmaChartInstance.data.datasets[1].data = stRaw;
+            stepsEmaChartInstance.update('none');
+          } else {
+            stepsEmaChartInstance = new Chart(stepsEmaCtx, {
+              type: 'bar',
+              data: {
+                labels: stLabels,
+                datasets: [
+                  {
+                    type: 'line',
+                    label: '7-Day EMA Trend',
+                    data: stEma,
+                    borderColor: '#0284c7',
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    tension: 0.3
+                  },
+                  {
+                    type: 'bar',
+                    label: 'Daily Steps',
+                    data: stRaw,
+                    backgroundColor: 'rgba(16, 185, 129, 0.45)',
+                    borderColor: '#059669',
+                    borderWidth: 1
+                  }
+                ]
               },
-              {
-                type: 'bar',
-                label: 'Daily Steps',
-                data: stRaw,
-                backgroundColor: 'rgba(16, 185, 129, 0.45)',
-                borderColor: '#059669',
-                borderWidth: 1
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { font: { family: 'Inter', size: 10 } } } },
+                scales: {
+                  y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 } } },
+                  x: { ticks: { font: { family: 'Inter', size: 9 } } }
+                }
               }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { font: { family: 'Inter', size: 10 } } } },
-            scales: {
-              y: { beginAtZero: true, ticks: { font: { family: 'Inter', size: 10 } } },
-              x: { ticks: { font: { family: 'Inter', size: 9 } } }
-            }
+            });
           }
-        });
+        }
+      } else if (!isTabActive('steps')) {
+        __dirtyTabs.add('steps');
       }
 
       // 7. 7-Column Day-of-Week Efficiency Matrix (Mon through Sun)
@@ -15924,7 +16113,7 @@
       refreshEventLinkedViews(true);
 
       // 4. Everything else warms up in the background so the first paint is not blocked by
-      //    six unrelated table fetches (previously all 9 ran before anything could render).
+      //    six unrelated table fetches. Heavy third-party embeds (YouTube / Drive) wait for Tab 06.
       const warmUpSecondaryData = () => {
         Promise.allSettled([
           fetchAndRenderHabits(),
@@ -15934,12 +16123,30 @@
           fetchAndRenderPortfolioLogs(),
           fetchAndRenderYoutubeResources()
         ]);
-        loadSavedGDriveConfig().then(() => fetchGoogleDriveResources(false)).catch(() => {});
       };
       if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(warmUpSecondaryData, { timeout: 2500 });
+        requestIdleCallback(warmUpSecondaryData, { timeout: 2800 });
       } else {
-        setTimeout(warmUpSecondaryData, 600);
+        setTimeout(warmUpSecondaryData, 900);
+      }
+
+      // Observe chart canvases so Chart.js lazy-loads on scroll/visibility without blocking LCP
+      if (typeof IntersectionObserver === 'function') {
+        const chartObs = new IntersectionObserver((entries, obs) => {
+          for (let i = 0; i < entries.length; i++) {
+            if (entries[i].isIntersecting) {
+              const cid = entries[i].target && entries[i].target.id;
+              obs.unobserve(entries[i].target);
+              ensureChartJsAndRender(cid && cid.startsWith('steps') ? 'steps' : 'study');
+            }
+          }
+        }, { rootMargin: '220px 0px' });
+        ['studyChart', 'studyEmaChart', 'stepsChart', 'stepsEmaChart'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) chartObs.observe(el);
+        });
+      } else {
+        setTimeout(() => ensureChartJsAndRender(), 1200);
       }
 
       // 5. Restore the module from the URL (#study / #calendar / …) so refreshes, bookmarks

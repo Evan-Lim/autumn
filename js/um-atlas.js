@@ -217,6 +217,9 @@
   let umPlaces = CORE_FALLBACK_PLACES.slice();
   let umPlaceByKey = new Map();
   let umIndexLoaded = false;
+  let umIndexLoadPromise = null;
+  let subCandidatesByFaculty = new Map();
+  let eventMatchMemo = new Map();
   let activeSelectedCourseCode = '';
 
   const rawStoredOrigin = (() => {
@@ -236,19 +239,62 @@
     updatedAt: 0
   };
 
+  function preparePlaceEntry(p) {
+    if (!p || p._prepped) return p;
+    const titleLower = String(p.title || '').toLowerCase();
+    const idLower = String(p.id || '').toLowerCase();
+    const facLower = String(p.faculty_id || '').toLowerCase();
+    const subLower = String(p.subtitle || '').toLowerCase();
+    const kwRaw = Array.isArray(p.keywords) ? p.keywords.join(' ').toLowerCase() : String(p.keywords || '').toLowerCase();
+    const kwTokens = new Set(kwRaw ? kwRaw.split(/\s+/).filter(Boolean) : []);
+    let titleWordRx = null;
+    if (titleLower.length >= 5) {
+      try {
+        titleWordRx = new RegExp(`(^|[^a-z0-9])${titleLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`, 'i');
+      } catch (e) {}
+    }
+    let codeRx = null;
+    const codeMatch = subLower.match(/•\s*([a-z0-9-]+)$/i);
+    if (codeMatch && codeMatch[1] && codeMatch[1].length >= 3) {
+      try {
+        codeRx = new RegExp(`(^|[^a-z0-9])${codeMatch[1].toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`, 'i');
+      } catch (e) {}
+    }
+    p._titleLower = titleLower;
+    p._idLower = idLower;
+    p._facLower = facLower;
+    p._kwTokens = kwTokens;
+    p._titleWordRx = titleWordRx;
+    p._codeRx = codeRx;
+    p._prepped = true;
+    return p;
+  }
+
   function rebuildPlaceMap() {
     umPlaceByKey.clear();
+    subCandidatesByFaculty.clear();
+    eventMatchMemo.clear();
     CORE_FALLBACK_PLACES.forEach((p) => {
+      preparePlaceEntry(p);
       umPlaceByKey.set(`${p.kind}:${p.id}`, p);
       umPlaceByKey.set(String(p.id), p);
       umPlaceByKey.set(String(p.id).toUpperCase(), p);
     });
     umPlaces.forEach((p) => {
       if (!p || !p.id || !p.kind) return;
+      preparePlaceEntry(p);
       umPlaceByKey.set(`${p.kind}:${p.id}`, p);
       umPlaceByKey.set(String(p.id), p);
       if (!umPlaceByKey.has(String(p.id).toUpperCase())) {
         umPlaceByKey.set(String(p.id).toUpperCase(), p);
+      }
+      if (p.faculty_id && p.kind !== 'faculty') {
+        let bucket = subCandidatesByFaculty.get(p.faculty_id);
+        if (!bucket) {
+          bucket = [];
+          subCandidatesByFaculty.set(p.faculty_id, bucket);
+        }
+        bucket.push(p);
       }
     });
   }
@@ -290,6 +336,7 @@
     try {
       localStorage.setItem(STORAGE_DEST_OVERRIDES_KEY, JSON.stringify(map));
     } catch (e) {}
+    eventMatchMemo.clear();
     refreshAllUmTelemetryViews();
   }
 
@@ -351,30 +398,54 @@
 
   async function loadUmSearchIndex() {
     if (umIndexLoaded) return umPlaces;
-    const urls = ['./data/um_search_index.json', `${UM_ATLAS_BASE_URL}/data/um_search_index.json`];
-    for (const url of urls) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const json = await res.json();
-        const items = Array.isArray(json) ? json : (json && Array.isArray(json.items) ? json.items : []);
-        if (items.length > 0) {
-          const extraFallbacks = CORE_FALLBACK_PLACES.filter((f) =>
-            !items.some((x) => x.id === f.id && x.kind === f.kind)
-          );
-          umPlaces = extraFallbacks.concat(items);
-          umIndexLoaded = true;
-          rebuildPlaceMap();
-          if (userGpsState.coord) {
-            userGpsState.nearestPlace = findNearestUmPlace(userGpsState.coord);
+    if (umIndexLoadPromise) return umIndexLoadPromise;
+    umIndexLoadPromise = (async () => {
+      const urls = ['./data/um_search_index.json', `${UM_ATLAS_BASE_URL}/data/um_search_index.json`];
+      const cacheName = 'autumn-um-atlas-v1';
+      for (const url of urls) {
+        try {
+          let json = null;
+          if (typeof caches !== 'undefined') {
+            try {
+              const cache = await caches.open(cacheName);
+              const cachedRes = await cache.match(url);
+              if (cachedRes && cachedRes.ok) {
+                json = await cachedRes.json();
+              }
+            } catch (ce) {}
           }
-          updateUmGpsStatusButton();
-          refreshAllUmTelemetryViews();
-          return umPlaces;
-        }
-      } catch (e) {}
-    }
-    return umPlaces;
+          if (!json) {
+            const res = await fetch(url, { cache: 'force-cache' });
+            if (!res.ok) continue;
+            if (typeof caches !== 'undefined') {
+              try {
+                const cache = await caches.open(cacheName);
+                cache.put(url, res.clone()).catch(() => {});
+              } catch (ce) {}
+            }
+            json = await res.json();
+          }
+          const items = Array.isArray(json) ? json : (json && Array.isArray(json.items) ? json.items : []);
+          if (items.length > 0) {
+            const seenKeys = new Set(items.map((x) => `${x.kind}:${x.id}`));
+            const extraFallbacks = CORE_FALLBACK_PLACES.filter((f) => !seenKeys.has(`${f.kind}:${f.id}`));
+            umPlaces = extraFallbacks.concat(items);
+            umIndexLoaded = true;
+            rebuildPlaceMap();
+            if (userGpsState.coord) {
+              userGpsState.nearestPlace = findNearestUmPlace(userGpsState.coord);
+            }
+            updateUmGpsStatusButton();
+            refreshAllUmTelemetryViews();
+            return umPlaces;
+          }
+        } catch (e) {}
+      }
+      return umPlaces;
+    })().finally(() => {
+      if (!umIndexLoaded) umIndexLoadPromise = null;
+    });
+    return umIndexLoadPromise;
   }
 
   function sanitizeVenueNoise(text) {
@@ -423,25 +494,17 @@
       }
     }
 
-    const candidates = umPlaces.filter((p) => p.faculty_id === facultyId && p.kind !== 'faculty');
+    const candidates = subCandidatesByFaculty.get(facultyId) || [];
     let best = null;
     let bestScore = 0;
-    for (const c of candidates) {
-      const t = String(c.title || '').toLowerCase();
-      const sub = String(c.subtitle || '').toLowerCase();
+    for (let i = 0; i < candidates.length; i++) {
+      const c = candidates[i];
       let s = 0;
-      if (t.length >= 5) {
-        const escapedTitle = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        if (new RegExp(`(^|[^a-z0-9])${escapedTitle}([^a-z0-9]|$)`, 'i').test(norm)) {
-          s += 60 + t.length;
-        }
+      if (c._titleWordRx && c._titleWordRx.test(norm)) {
+        s += 60 + c._titleLower.length;
       }
-      const codeMatch = sub.match(/•\s*([a-z0-9-]+)$/i);
-      if (codeMatch && codeMatch[1] && codeMatch[1].length >= 3) {
-        const escapedCode = codeMatch[1].toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        if (new RegExp(`(^|[^a-z0-9])${escapedCode}([^a-z0-9]|$)`, 'i').test(norm)) {
-          s += 75;
-        }
+      if (c._codeRx && c._codeRx.test(norm)) {
+        s += 75;
       }
       if (s > bestScore) {
         bestScore = s;
@@ -466,9 +529,20 @@
     if (!ev) return null;
 
     const overrides = getEventDestOverrides();
-    if (ev.id && overrides[ev.id]) {
-      const overridden = umPlaceByKey.get(overrides[ev.id]);
-      if (overridden) return { place: overridden, matchSource: 'pinned', confidence: 100, detailVenueNote: '' };
+    const overrideKey = ev.id ? (overrides[ev.id] || '') : '';
+    const memoKey = `${ev.id || ''}|${ev.title || ''}|${ev.location || ''}|${ev.description || ''}|${overrideKey}|${umIndexLoaded ? '1' : '0'}`;
+    if (eventMatchMemo.has(memoKey)) {
+      return eventMatchMemo.get(memoKey);
+    }
+    const cacheAndReturn = (result) => {
+      if (eventMatchMemo.size > 600) eventMatchMemo.clear();
+      eventMatchMemo.set(memoKey, result);
+      return result;
+    };
+
+    if (overrideKey) {
+      const overridden = umPlaceByKey.get(overrideKey);
+      if (overridden) return cacheAndReturn({ place: overridden, matchSource: 'pinned', confidence: 100, detailVenueNote: '' });
     }
 
     const locRaw = String(ev.location || '').trim();
@@ -478,7 +552,7 @@
       : String(ev.description || '').replace(/<[^>]*>/g, ' ').trim();
 
     const combined = `${descRaw} | ${locRaw} | ${titleRaw}`.trim();
-    if (!combined || combined === '|  |') return null;
+    if (!combined || combined === '|  |') return cacheAndReturn(null);
 
     // Priority Rule for Engineering Classes (KIE1003, KIE1004, KIE1005, KIX1001) & FKEJ / FKUM / Fac of Engineering
     const isTrackedEngClass = /\b(kie\s*1003|kie\s*1004|kie\s*1005|kix\s*1001|kie\s*\d{4}|kix\s*\d{4})\b/i.test(combined);
@@ -497,24 +571,24 @@
         const specificFkNode = findSpecificSubPlace(dt.text, 'FK');
         if (specificFkNode) {
           const note = extractDetailVenueNote(descRaw || locRaw);
-          return {
+          return cacheAndReturn({
             place: specificFkNode,
             matchSource: dt.source,
             confidence: 98,
             detailVenueNote: note,
             isEngineeringFallback: false
-          };
+          });
         }
       }
 
       if (fkFaculty) {
-        return {
+        return cacheAndReturn({
           place: fkFaculty,
           matchSource: descRaw ? 'details (Fac of Engineering)' : 'course (Fac of Engineering)',
           confidence: 95,
           detailVenueNote: '',
           isEngineeringFallback: true
-        };
+        });
       }
     }
 
@@ -539,12 +613,12 @@
               findSpecificSubPlace(descRaw, found.faculty_id || found.id) ||
               findSpecificSubPlace(locRaw, found.faculty_id || found.id) ||
               findSpecificSubPlace(f.text, found.faculty_id || found.id);
-            return {
+            return cacheAndReturn({
               place: specific || found,
               matchSource: f.source,
               confidence: 92,
               detailVenueNote: extractDetailVenueNote(descRaw || locRaw)
-            };
+            });
           }
         }
       }
@@ -577,10 +651,10 @@
 
       for (let i = 0; i < umPlaces.length; i++) {
         const p = umPlaces[i];
-        const titleLower = String(p.title || '').toLowerCase();
-        const idLower = String(p.id || '').toLowerCase();
-        const facLower = String(p.faculty_id || '').toLowerCase();
-        const kwStr = Array.isArray(p.keywords) ? p.keywords.join(' ').toLowerCase() : String(p.keywords || '').toLowerCase();
+        const titleLower = p._titleLower || '';
+        const idLower = p._idLower || '';
+        const facLower = p._facLower || '';
+        const kwTokens = p._kwTokens;
 
         let score = 0;
         if (facLower && tokens.includes(facLower)) score += 55;
@@ -599,7 +673,7 @@
           if (titleLower.includes(tok)) {
             matchedTokens++;
             score += tok.length >= 5 ? 22 : 12;
-          } else if (kwStr && kwStr.split(/\s+/).includes(tok)) {
+          } else if (kwTokens && kwTokens.has(tok)) {
             matchedTokens++;
             score += 18;
           }
@@ -622,7 +696,7 @@
     }
 
     const minThreshold = (locRaw.length >= 3 || descRaw.length >= 3) ? 34 : 48;
-    return bestScore >= minThreshold ? bestMatch : null;
+    return cacheAndReturn(bestScore >= minThreshold ? bestMatch : null);
   }
 
   function buildUmAtlasDeepLink(fromKey, toKey) {
@@ -1240,13 +1314,22 @@
   }
 
   function refreshAllUmTelemetryViews() {
+    const curTab = typeof activeTabName !== 'undefined' ? activeTabName : 'study';
     if (typeof updateNavbarAndRadarTelemetry === 'function') updateNavbarAndRadarTelemetry();
-    renderCalendarCommuteStrip();
-    renderStudyCourseHubStrip();
-    if (typeof renderCalendarViewport === 'function' && typeof activeTabName !== 'undefined' && activeTabName === 'calendar') {
+    if (curTab === 'calendar') {
+      renderCalendarCommuteStrip();
+    } else if (typeof window.__markAutumnTabDirty === 'function') {
+      window.__markAutumnTabDirty('calendar');
+    }
+    if (curTab === 'study') {
+      renderStudyCourseHubStrip();
+    } else if (typeof window.__markAutumnTabDirty === 'function') {
+      window.__markAutumnTabDirty('study');
+    }
+    if (typeof renderCalendarViewport === 'function' && curTab === 'calendar') {
       renderCalendarViewport();
     }
-    if (typeof renderFocusMode === 'function' && typeof activeTabName !== 'undefined' && activeTabName === 'focus') {
+    if (typeof renderFocusMode === 'function' && curTab === 'focus') {
       renderFocusMode();
     }
     const calList = getCalEvents();
@@ -1257,23 +1340,67 @@
   }
 
   // ── 6. Inline Table Cell Editing & Keyboard Navigation Across Ledgers ──────
-  function attachLedgerInlineEditing() {
-    const studyTbody = document.querySelector('#ledger-table tbody');
-    const stepsTbody = document.querySelector('#steps-ledger-table tbody');
+  function wireDelegatedTbody(tbody, type) {
+    if (!tbody || tbody.dataset.delegatedInline === '1') return;
+    tbody.dataset.delegatedInline = '1';
+    tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('.inline-row-edit-btn');
+      if (!btn) return;
+      e.stopPropagation();
+      const tr = btn.closest('tr');
+      if (tr && tr.dataset.ledgerDate) {
+        startInlineRowEdit(tr, type, tr.dataset.ledgerDate);
+      }
+    });
+    tbody.addEventListener('dblclick', (e) => {
+      const tr = e.target.closest('tr');
+      if (!tr || !tr.dataset.ledgerDate) return;
+      startInlineRowEdit(tr, type, tr.dataset.ledgerDate);
+    });
+    tbody.addEventListener('keydown', (e) => {
+      const tr = e.target.closest('tr');
+      if (!tr || !tr.dataset.ledgerDate || tr.dataset.editing === '1') return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        startInlineRowEdit(tr, type, tr.dataset.ledgerDate);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = tr.nextElementSibling;
+        if (next && next.tabIndex === 0) next.focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = tr.previousElementSibling;
+        if (prev && prev.tabIndex === 0) prev.focus();
+      }
+    });
+    tbody.addEventListener('focusin', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr && tr.dataset.ledgerDate) tr.classList.add('ledger-row-focused');
+    });
+    tbody.addEventListener('focusout', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr) tr.classList.remove('ledger-row-focused');
+    });
+  }
 
+  function attachLedgerInlineEditing(onlyType) {
     function enhanceTableRows(tbody, type) {
       if (!tbody) return;
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      rows.forEach((tr, idx) => {
-        const cells = tr.querySelectorAll('td');
-        if (cells.length < 4) return;
+      wireDelegatedTbody(tbody, type);
+      const rows = tbody.rows;
+      for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i];
+        if (tr.dataset.rowWired === '1') continue;
+        const cells = tr.cells;
+        if (cells.length < 4) continue;
         const dateStr = (cells[0].textContent || '').trim();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
 
         tr.tabIndex = 0;
         tr.dataset.ledgerDate = dateStr;
         tr.dataset.ledgerType = type;
-        tr.dataset.rowIndex = String(idx);
+        tr.dataset.rowIndex = String(i);
+        tr.dataset.rowWired = '1';
         tr.title = 'Double-click or press Enter to edit this day inline · ArrowUp/ArrowDown to navigate rows';
 
         const statusCell = cells[3];
@@ -1283,36 +1410,17 @@
           editBtn.className = 'inline-row-edit-btn btn-tech-outline !py-0 !px-1 !text-[9px] ml-auto opacity-70 hover:opacity-100';
           editBtn.title = `Inline edit ${dateStr}`;
           editBtn.innerHTML = ICONS.edit;
-          editBtn.onclick = (e) => {
-            e.stopPropagation();
-            startInlineRowEdit(tr, type, dateStr);
-          };
           statusCell.appendChild(editBtn);
         }
-
-        tr.ondblclick = () => startInlineRowEdit(tr, type, dateStr);
-        tr.onkeydown = (e) => {
-          if (tr.dataset.editing === '1') return;
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            startInlineRowEdit(tr, type, dateStr);
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            const next = rows[idx + 1];
-            if (next && next.focus) next.focus();
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            const prev = rows[idx - 1];
-            if (prev && prev.focus) prev.focus();
-          }
-        };
-        tr.onfocus = () => tr.classList.add('ledger-row-focused');
-        tr.onblur = () => tr.classList.remove('ledger-row-focused');
-      });
+      }
     }
 
-    enhanceTableRows(studyTbody, 'study');
-    enhanceTableRows(stepsTbody, 'steps');
+    if (!onlyType || onlyType === 'study') {
+      enhanceTableRows(document.querySelector('#ledger-table tbody'), 'study');
+    }
+    if (!onlyType || onlyType === 'steps') {
+      enhanceTableRows(document.querySelector('#steps-ledger-table tbody'), 'steps');
+    }
   }
 
   function startInlineRowEdit(tr, type, dateStr) {
@@ -1466,9 +1574,27 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     updateUmGpsStatusButton();
-    loadUmSearchIndex();
-    renderStudyCourseHubStrip();
-    renderCalendarCommuteStrip();
+    if (typeof activeTabName === 'undefined' || activeTabName === 'study') {
+      renderStudyCourseHubStrip();
+    }
+    if (typeof activeTabName !== 'undefined' && activeTabName === 'calendar') {
+      renderCalendarCommuteStrip();
+      loadUmSearchIndex();
+    } else {
+      const scheduleAtlasLoad = () => {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => loadUmSearchIndex(), { timeout: 3500 });
+        } else {
+          setTimeout(() => loadUmSearchIndex(), 2000);
+        }
+      };
+      if (document.readyState === 'complete') scheduleAtlasLoad();
+      else window.addEventListener('load', scheduleAtlasLoad, { once: true });
+    }
+    const searchIn = document.getElementById('global-search-input');
+    if (searchIn) {
+      searchIn.addEventListener('focus', () => { loadUmSearchIndex(); }, { once: true });
+    }
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: 'geolocation' }).then((res) => {
         if (res.state === 'granted') requestUserCampusGps(false);

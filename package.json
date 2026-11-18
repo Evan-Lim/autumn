@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host 0.0.0.0",
-    "build": "mkdir -p public/css public/js public/data netlify-static/css netlify-static/js netlify-static/data && cp -r css/* public/css/ && cp -r js/* public/js/ && cp index.html netlify-static/index.html && cp -r css/* netlify-static/css/ && cp -r js/* netlify-static/js/ && cp -r public/data/* netlify-static/data/ && vite build",
+    "build": "node scripts/build-static.mjs && vite build",
     "lint": "node --experimental-strip-types --test src/utils/telemetryMath.test.ts",
     "preview": "vite preview"
   },

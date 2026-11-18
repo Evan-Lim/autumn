@@ -71,54 +71,69 @@
 
   function renderVelocitySparklines() {
     if (typeof getPhaseActiveRows !== 'function') return;
-    const activeStudy = getPhaseActiveRows(globalStudyRows || []).filter((r) => !r.is_gap_day);
-    const activeSteps = getPhaseActiveRows(globalStepsRows || []).filter((r) => !r.is_gap_day);
-
-    const last14Study = activeStudy.slice(-14).map((r) => Number(r.actual_hours) || 0);
-    const last14Steps = activeSteps.slice(-14).map((r) => Number(r.actual_steps) || 0);
-    const last14Yield = activeStudy.slice(-14).map((r) => {
-      if (typeof computeDailyOperationalYield === 'function') {
-        return computeDailyOperationalYield(r.date).score || 0;
+    const curTab = typeof activeTabName !== 'undefined' ? activeTabName : 'study';
+    const studyVisible = curTab === 'study';
+    const stepsVisible = curTab === 'steps';
+    if (!studyVisible && !stepsVisible) {
+      if (typeof window.__markAutumnTabDirty === 'function') {
+        window.__markAutumnTabDirty('study');
+        window.__markAutumnTabDirty('steps');
       }
-      return 0;
-    });
+      return;
+    }
 
     const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-    const study7 = avg(last14Study.slice(-7));
-    const studyPrev7 = avg(last14Study.slice(0, -7));
-    const studyDelta = studyPrev7 > 0 ? `${study7 >= studyPrev7 ? '+' : ''}${(study7 - studyPrev7).toFixed(1)}h vs prior 7d` : `7D mean: ${study7.toFixed(1)}h/d`;
 
-    const steps7 = avg(last14Steps.slice(-7));
-    const stepsPrev7 = avg(last14Steps.slice(0, -7));
-    const stepsDelta = stepsPrev7 > 0 ? `${steps7 >= stepsPrev7 ? '+' : ''}${Math.round(steps7 - stepsPrev7).toLocaleString()} vs prior 7d` : `7D mean: ${Math.round(steps7).toLocaleString()}/d`;
+    if (studyVisible) {
+      const activeStudy = getPhaseActiveRows(globalStudyRows || []).filter((r) => !r.is_gap_day);
+      const last14Study = activeStudy.slice(-14).map((r) => Number(r.actual_hours) || 0);
+      const last14Yield = activeStudy.slice(-14).map((r) => {
+        if (typeof computeDailyOperationalYield === 'function') {
+          return computeDailyOperationalYield(r.date).score || 0;
+        }
+        return 0;
+      });
+      const study7 = avg(last14Study.slice(-7));
+      const studyPrev7 = avg(last14Study.slice(0, -7));
+      const studyDelta = studyPrev7 > 0 ? `${study7 >= studyPrev7 ? '+' : ''}${(study7 - studyPrev7).toFixed(1)}h vs prior 7d` : `7D mean: ${study7.toFixed(1)}h/d`;
+      const yield7 = avg(last14Yield.slice(-7));
 
-    const yield7 = avg(last14Yield.slice(-7));
+      injectSparklineIntoCard('stat-total', last14Study, '14D STUDY VELOCITY', studyDelta, '#047857', 'rgba(16, 185, 129, 0.16)', 7);
+      injectSparklineIntoCard('stat-avg', last14Yield, '14D YIELD SCORE TREND', `7D mean: ${yield7.toFixed(1)} pts`, '#0284c7', 'rgba(2, 132, 199, 0.14)', 95);
+      injectSparklineIntoCard(
+        'stat-best',
+        activeStudy.slice(-14).map((r) => -(Number(r.computed_overflow) || 0)),
+        '14D SURPLUS / DEBT CHAIN',
+        activeStudy.length ? `Bal: ${(-(Number(activeStudy[activeStudy.length - 1].computed_overflow) || 0)).toFixed(1)}h` : '0.0h',
+        '#d97706',
+        'rgba(245, 158, 11, 0.15)',
+        0
+      );
+    } else if (typeof window.__markAutumnTabDirty === 'function') {
+      window.__markAutumnTabDirty('study');
+    }
 
-    // Study KPI cards
-    injectSparklineIntoCard('stat-total', last14Study, '14D STUDY VELOCITY', studyDelta, '#047857', 'rgba(16, 185, 129, 0.16)', 7);
-    injectSparklineIntoCard('stat-avg', last14Yield, '14D YIELD SCORE TREND', `7D mean: ${yield7.toFixed(1)} pts`, '#0284c7', 'rgba(2, 132, 199, 0.14)', 95);
-    injectSparklineIntoCard(
-      'stat-best',
-      activeStudy.slice(-14).map((r) => -(Number(r.computed_overflow) || 0)),
-      '14D SURPLUS / DEBT CHAIN',
-      activeStudy.length ? `Bal: ${(-(Number(activeStudy[activeStudy.length - 1].computed_overflow) || 0)).toFixed(1)}h` : '0.0h',
-      '#d97706',
-      'rgba(245, 158, 11, 0.15)',
-      0
-    );
+    if (stepsVisible) {
+      const activeSteps = getPhaseActiveRows(globalStepsRows || []).filter((r) => !r.is_gap_day);
+      const last14Steps = activeSteps.slice(-14).map((r) => Number(r.actual_steps) || 0);
+      const steps7 = avg(last14Steps.slice(-7));
+      const stepsPrev7 = avg(last14Steps.slice(0, -7));
+      const stepsDelta = stepsPrev7 > 0 ? `${steps7 >= stepsPrev7 ? '+' : ''}${Math.round(steps7 - stepsPrev7).toLocaleString()} vs prior 7d` : `7D mean: ${Math.round(steps7).toLocaleString()}/d`;
 
-    // Steps KPI cards
-    injectSparklineIntoCard('steps-stat-total', last14Steps, '14D STEP VELOCITY', stepsDelta, '#047857', 'rgba(16, 185, 129, 0.16)', 10000);
-    injectSparklineIntoCard('steps-stat-avg', last14Steps.slice(-7), '7D KINETIC PULSE', `Mean: ${Math.round(steps7).toLocaleString()} steps`, '#0284c7', 'rgba(2, 132, 199, 0.14)', 10000);
-    injectSparklineIntoCard(
-      'steps-stat-best',
-      activeSteps.slice(-14).map((r) => -(Number(r.computed_overflow) || 0)),
-      '14D STEP SURPLUS / DEBT',
-      activeSteps.length ? `Bal: ${Math.round(-(Number(activeSteps[activeSteps.length - 1].computed_overflow) || 0)).toLocaleString()}` : '0',
-      '#d97706',
-      'rgba(245, 158, 11, 0.15)',
-      0
-    );
+      injectSparklineIntoCard('steps-stat-total', last14Steps, '14D STEP VELOCITY', stepsDelta, '#047857', 'rgba(16, 185, 129, 0.16)', 10000);
+      injectSparklineIntoCard('steps-stat-avg', last14Steps.slice(-7), '7D KINETIC PULSE', `Mean: ${Math.round(steps7).toLocaleString()} steps`, '#0284c7', 'rgba(2, 132, 199, 0.14)', 10000);
+      injectSparklineIntoCard(
+        'steps-stat-best',
+        activeSteps.slice(-14).map((r) => -(Number(r.computed_overflow) || 0)),
+        '14D STEP SURPLUS / DEBT',
+        activeSteps.length ? `Bal: ${Math.round(-(Number(activeSteps[activeSteps.length - 1].computed_overflow) || 0)).toLocaleString()}` : '0',
+        '#d97706',
+        'rgba(245, 158, 11, 0.15)',
+        0
+      );
+    } else if (typeof window.__markAutumnTabDirty === 'function') {
+      window.__markAutumnTabDirty('steps');
+    }
   }
 
   function setCorrelationMatrixWindow(mode) {
@@ -127,6 +142,11 @@
   }
 
   function renderCorrelationMatrix() {
+    const curTab = typeof activeTabName !== 'undefined' ? activeTabName : 'study';
+    if (curTab !== 'study') {
+      if (typeof window.__markAutumnTabDirty === 'function') window.__markAutumnTabDirty('study');
+      return;
+    }
     const host = document.getElementById('cross-module-corr-matrix');
     if (!host || typeof getPhaseActiveRows !== 'function') return;
 
@@ -274,9 +294,19 @@
     `;
   }
 
+  let _analyticsRafId = 0;
   function refreshAllAnalytics() {
-    renderVelocitySparklines();
-    renderCorrelationMatrix();
+    if (_analyticsRafId) return;
+    const run = () => {
+      _analyticsRafId = 0;
+      renderVelocitySparklines();
+      renderCorrelationMatrix();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      _analyticsRafId = requestAnimationFrame(run);
+    } else {
+      run();
+    }
   }
 
   window.analyticsMatrix = {

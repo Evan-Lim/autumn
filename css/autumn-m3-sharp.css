@@ -748,3 +748,16 @@ html, body, main, header {
     font-size: 0.7rem !important;
   }
 }
+
+/* ==========================================================================
+   10. OFFSCREEN RENDER CONTAINMENT (VISUALS 100% UNCHANGED)
+   ========================================================================== */
+#cross-module-corr-matrix,
+#ledger-table,
+#steps-ledger-table,
+#grades-ledger-table,
+#grades-distribution-table {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
