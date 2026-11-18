@@ -1,0 +1,279 @@
+<div class="cmd-frame p-3.5 sm:p-5 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Tasks Header & Column Creator -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#c5ded0] pb-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Subject / Competition Task Matrix</h2>
+              <span class="font-mono-tech text-xs text-[#56735f]">/04</span>
+              <button
+                type="button"
+                onclick="toggleEntireTaskMatrixSection()"
+                id="toggle-task-matrix-section-btn"
+                class="btn-tech-outline !py-0.5 !px-2 !text-[10px]"
+                title="Collapse or expand the entire task matrix section"
+              >
+                ▾ Collapse Matrix
+              </button>
+            </div>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">
+              responsive wrapping columns • use &lsaquo; &rsaquo; buttons (or drag on desktop) to rearrange • click ▾/▸ to collapse or expand • ＋ adds a subtask (nest as deep as you like)
+            </p>
+          </div>
+
+          <!-- Add New Column Form (Owner Only) -->
+          <form id="add-column-form" class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-1 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> SIGN IN TO EDIT</span>
+            <select id="col-type-input" aria-label="New column category" class="tech-input owner-input sm:!w-auto py-1.5 text-xs" disabled>
+              <option value="SUBJECT">SUBJECT</option>
+              <option value="COMPETITION">COMPETITION</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+            <input type="text" id="col-title-input" placeholder="New Subject / Comp name..." class="tech-input owner-input sm:!w-56 py-1.5 text-xs flex-1" required disabled>
+            <button type="submit" class="btn-chamfer owner-input py-1.5 px-4 text-xs w-full sm:w-auto" disabled>
+              + Add Column
+            </button>
+          </form>
+        </div>
+
+        <!-- Summary Strip + Expand/Collapse All Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-2 py-3 border-b border-[#c5ded0] font-mono-tech text-xs text-[#436152]">
+          <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+            <span>ACTIVE COLUMNS: <strong id="tasks-col-count" class="text-[#0c1f17]">0</strong></span>
+            <span>COMPLETED: <strong id="tasks-col-done-count" class="text-[#047857]">0</strong></span>
+            <span>TASKS DONE: <strong id="tasks-item-done-count" class="text-[#0369a1]">0 / 0</strong></span>
+            <span>SUBTASKS: <strong id="tasks-subtask-count" class="text-[#0c1f17]">0</strong></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" onclick="setAllTaskColumnsCollapsed(false)" class="btn-tech-outline !py-0.5 !px-2 !text-[10px]">
+              ▾ Expand All
+            </button>
+            <button type="button" onclick="setAllTaskColumnsCollapsed(true)" class="btn-tech-outline !py-0.5 !px-2 !text-[10px]">
+              ▸ Collapse All
+            </button>
+            <span class="text-[#c5ded0] hidden sm:inline">|</span>
+            <span class="tech-badge badge-green">SUBJECT</span>
+            <span class="tech-badge badge-blue">COMPETITION</span>
+            <span class="tech-badge badge-amber">OTHER</span>
+          </div>
+        </div>
+
+        <!-- Padlet-Style Masonry Wall (Columns pack vertically without forced row alignment) -->
+        <div id="tasks-batch-bar-host"></div>
+        <div id="tasks-matrix-body-wrap" class="mt-3 w-full min-w-0">
+          <div id="tasks-columns-container" class="tasks-masonry-wall">
+            <!-- Dynamic Masonry Lanes & Cards Rendered via JS -->
+          </div>
+          <div class="table-export-bar mt-4">
+            <span>EXPORT TASK MATRIX:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="exportTasksMatrixData('md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportTasksMatrixData('csv')" class="btn-export-tag">↓ CSV</button>
+              <button type="button" onclick="exportTasksMatrixData('json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportTasksMatrixData('copy')" class="btn-export-tag">⎘ COPY MD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           RECURRING TASKS & HABITS LEDGER (AUTO-RESETS BY FREQUENCY)
+           ========================================== -->
+      <div class="cmd-frame p-4 sm:p-5 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Habits Header -->
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-[#c5ded0] pb-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Recurring Tasks &amp; Habits Ledger</h2>
+              <span class="tech-badge badge-green">AUTO-UNCHECKS EACH CYCLE</span>
+              <span class="font-mono-tech text-xs text-[#56735f]">/04B</span>
+            </div>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">
+              automatically resets to unchecked at the start of every new day, week, or month • rearrangeable &amp; exportable
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 font-mono-tech text-xs">
+            <span class="tech-badge badge-green">DONE THIS CYCLE: <strong id="habits-done-count" class="ml-1">0 / 0</strong></span>
+            <span class="owner-lock-badge text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-0.5 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> SIGN IN TO EDIT</span>
+          </div>
+        </div>
+
+        <!-- Add Recurring Habit Form (Owner Only) -->
+        <div class="my-4 p-3.5 bg-[#eff8f2] border border-[#c5ded0]">
+          <div class="section-tag mb-2.5"><span class="diamond">◆</span> ADD RECURRING TASK / HABIT</div>
+          <form id="add-habit-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end">
+            <div class="lg:col-span-5">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="habit-title-input">1. Habit / Recurring Task Name</label>
+              <input type="text" id="habit-title-input" placeholder="e.g., Anki Flashcards Review, 15m Mobility, Weekly Past Paper..." class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+            <div class="lg:col-span-3">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="habit-frequency-input">2. Reset Frequency</label>
+              <select id="habit-frequency-input" class="tech-input owner-input !py-1.5 text-xs" disabled>
+                <option value="DAILY">DAILY (Resets Every Day)</option>
+                <option value="WEEKDAYS">WEEKDAYS (Mon – Fri)</option>
+                <option value="WEEKENDS">WEEKENDS (Sat – Sun)</option>
+                <option value="WEEKLY">WEEKLY (Resets Every Monday)</option>
+                <option value="BIWEEKLY">BIWEEKLY (Every 2 Weeks)</option>
+                <option value="MONTHLY">MONTHLY (Resets 1st of Month)</option>
+              </select>
+            </div>
+            <div class="lg:col-span-3">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="habit-notes-input">3. Notes / Target Window (Opt)</label>
+              <input type="text" id="habit-notes-input" placeholder="e.g., Before 09:00 / Sunday Night" class="tech-input owner-input !py-1.5 text-xs" disabled>
+            </div>
+            <div class="lg:col-span-1">
+              <button type="submit" class="btn-chamfer owner-input w-full !py-1.5 !px-3 text-xs" disabled>
+                + Add
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Recurring Habits Table (Mobile-Responsive Stack + Full Desktop Columns) -->
+        <div class="border border-[#87b39b] bg-white overflow-hidden max-w-full">
+          <div class="bg-[#d5e6dc] text-center font-mono-tech text-xs font-bold uppercase tracking-widest py-1 border-b border-[#87b39b] text-[#0c1f17]">
+            RECURRING PROTOCOL // HABIT MATRIX
+          </div>
+          <div class="w-full overflow-x-auto">
+            <table id="habits-ledger-table" class="tech-table w-full">
+              <thead>
+                <tr class="bg-[#f4faf6]">
+                  <th class="!text-center w-11 sm:w-16 border-r border-[#c5ded0]">CHECK</th>
+                  <th class="w-auto border-r border-[#c5ded0]">HABIT / RECURRING TASK</th>
+                  <th class="hidden md:table-cell !text-center w-32 border-r border-[#c5ded0]">FREQUENCY</th>
+                  <th class="hidden sm:table-cell !text-center w-44 border-r border-[#c5ded0]">CURRENT CYCLE STATUS</th>
+                  <th class="hidden sm:table-cell !text-center w-24 border-r border-[#c5ded0]">STREAK</th>
+                  <th data-no-export="true" class="!text-center sm:!text-right w-[68px] sm:w-28" id="habits-act-header">ACT</th>
+                </tr>
+              </thead>
+              <tbody id="habits-ledger-tbody">
+                <!-- Populated dynamically by renderHabitsTable() -->
+              </tbody>
+            </table>
+          </div>
+          <div class="table-export-bar px-3 pb-2">
+            <span>EXPORT RECURRING HABITS:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="exportHtmlTableData('habits-ledger-table', 'recurring-habits-ledger', 'csv')" class="btn-export-tag">↓ CSV</button>
+              <button type="button" onclick="exportHtmlTableData('habits-ledger-table', 'recurring-habits-ledger', 'md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportHtmlTableData('habits-ledger-table', 'recurring-habits-ledger', 'json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportHtmlTableData('habits-ledger-table', 'recurring-habits-ledger', 'tsv')" class="btn-export-tag">↓ TSV</button>
+              <button type="button" onclick="exportHtmlTableData('habits-ledger-table', 'recurring-habits-ledger', 'copy')" class="btn-export-tag">⎘ COPY MD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           DEDICATED RUNNING PERFORMANCE LEDGERS (5K / 10K / HALF / MARATHON)
+           ========================================== -->
+      <div class="cmd-frame p-4 sm:p-5">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Running Section Header & Distance Table Toggles -->
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-[#c5ded0] pb-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Running Performance Ledgers</h2>
+              <span class="tech-badge badge-green">AUTO-SORTED BY PACE</span>
+              <span class="font-mono-tech text-xs text-[#56735f]">/05</span>
+            </div>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">
+              sorted in order of increasing speed / decreasing pace • yellow = threshold, green = easy, grey = reference pace
+            </p>
+          </div>
+
+          <!-- Toggle Separate Distance Tables (5K always active; 10K, Half, Marathon toggleable) -->
+          <div class="flex flex-wrap items-center gap-1.5 bg-[#e8f3ec] p-1.5 border border-[#c5ded0]">
+            <span class="font-mono-tech text-[10px] uppercase text-[#436152] px-1.5">Active Tables:</span>
+            <button type="button" onclick="toggleRunCategoryTable('5k')" id="run-tab-toggle-5k" class="btn-tech-outline active-view !py-1 !px-2.5 !text-[11px]">
+              5K Run
+            </button>
+            <button type="button" onclick="toggleRunCategoryTable('10k')" id="run-tab-toggle-10k" class="btn-tech-outline !py-1 !px-2.5 !text-[11px]">
+              + 10K Run
+            </button>
+            <button type="button" onclick="toggleRunCategoryTable('half')" id="run-tab-toggle-half" class="btn-tech-outline !py-1 !px-2.5 !text-[11px]">
+              + Half Marathon
+            </button>
+            <button type="button" onclick="toggleRunCategoryTable('marathon')" id="run-tab-toggle-marathon" class="btn-tech-outline !py-1 !px-2.5 !text-[11px]">
+              + Marathon
+            </button>
+          </div>
+        </div>
+
+        <!-- Streamlined Run / Reference Pace Entry Form (Owner Only) -->
+        <div class="my-4 p-3.5 bg-[#eff8f2] border border-[#c5ded0]">
+          <div class="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
+            <div class="section-tag"><span class="diamond">◆</span> LOG RUN OR INSERT REFERENCE PACE</div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="tech-badge bg-[#fef08a] text-[#0c1f17] border-[#fde047]">THRESHOLD = YELLOW</span>
+              <span class="tech-badge bg-[#bbf7d0] text-[#064e3b] border-[#86efac]">EASY = GREEN</span>
+              <span class="tech-badge bg-[#d1d5db] text-[#1f2937] border-[#9ca3af]">REF PACE = GREY</span>
+              <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-0.5 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> SIGN IN TO LOG</span>
+            </div>
+          </div>
+
+          <form id="add-run-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end">
+            <!-- Distance Table Selector -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-category-input">Table Distance</label>
+              <select id="run-category-input" onchange="handleRunPaceOrTimePreview('pace')" class="tech-input owner-input !py-1.5 text-xs" disabled>
+                <option value="5k">5K RUN</option>
+                <option value="10k">10K RUN</option>
+                <option value="half">HALF MARATHON (21.1K)</option>
+                <option value="marathon">MARATHON (42.2K)</option>
+              </select>
+            </div>
+
+            <!-- 1A. Pace (min/km) - auto-fills if Total Time is entered -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-pace-input">1. Pace (min/km)</label>
+              <input type="text" id="run-pace-input" oninput="handleRunPaceOrTimePreview('pace')" placeholder="05:15 (or via time)" title="Format: MM:SS (e.g. 05:15)" class="tech-input owner-input !py-1.5 text-xs" disabled>
+            </div>
+
+            <!-- 1B. Optional Total Running Time (MM:SS or H:MM:SS) -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-time-input">Total Time (Opt)</label>
+              <input type="text" id="run-time-input" oninput="handleRunPaceOrTimePreview('time')" placeholder="Auto (e.g. 26:15)" title="Optional total time: MM:SS or H:MM:SS" class="tech-input owner-input !py-1.5 text-xs" disabled>
+            </div>
+
+            <!-- 2. Location -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-location-input">2. Location</label>
+              <input type="text" id="run-location-input" placeholder="KMPP / Raffel Park" class="tech-input owner-input !py-1.5 text-xs" disabled>
+            </div>
+
+            <!-- 3. Run Type (Threshold / Easy / Reference Pace) -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-type-input">3. Run Type</label>
+              <select id="run-type-input" onchange="handleRunTypeSelectChange()" class="tech-input owner-input !py-1.5 text-xs" disabled>
+                <option value="THRESHOLD">THRESHOLD (Yellow)</option>
+                <option value="EASY">EASY (Green)</option>
+                <option value="REFERENCE">REFERENCE PACE (Grey)</option>
+              </select>
+            </div>
+
+            <!-- Optional Date -->
+            <div class="lg:col-span-1" id="run-date-field-wrapper">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="run-date-input">Date</label>
+              <input type="date" id="run-date-input" class="tech-input owner-input !py-1.5 !px-1.5 text-xs" disabled>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="lg:col-span-1">
+              <button type="submit" class="btn-chamfer owner-input w-full !py-1.5 !px-3 text-xs" disabled>
+                + Add
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Dynamic Container for Separate Distance Tables (5K, 10K, Half Marathon, Marathon) -->
+        <div id="running-tables-container" class="grid grid-cols-1 gap-6 mt-4">
+          <!-- Populated dynamically by renderRunningTables() -->
+        </div>
+      </div>

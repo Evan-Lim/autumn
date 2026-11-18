@@ -1,0 +1,358 @@
+<!-- Left Column: Expandable Google Drive Folders & File Tree (/01) -->
+      <aside class="lg:col-span-5 xl:col-span-4 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex items-start justify-between border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Resource Vault</h2>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">google drive folders · paginated searchable tree · pdf / word / excel / powerpoint / google docs</p>
+            <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+              <span id="gdrive-sync-badge" class="tech-badge badge-green">DRIVE API // v3</span>
+              <span class="tech-badge badge-blue">EXPANDABLE TREE</span>
+            </div>
+          </div>
+          <span class="font-mono-tech text-xs text-[#56735f] shrink-0">/01</span>
+        </div>
+
+        <!-- Filter, sort & quick expand/collapse controls -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-1.5">
+            <div class="relative flex-1 min-w-0">
+              <input
+                type="text"
+                id="gdrive-search-input"
+                oninput="onDriveSearchInput()"
+                onkeydown="if (event.key === 'Escape') { clearDriveSearch(); }"
+                placeholder="Filter indexed files or folders..."
+                aria-label="Filter drive files and folders"
+                class="tech-input !py-1.5 text-xs w-full"
+                style="padding-right:24px;"
+              />
+              <button
+                type="button"
+                id="gdrive-search-clear"
+                onclick="clearDriveSearch()"
+                class="hidden font-mono-tech text-[11px] text-[#56735f] hover:text-[#0c1f17]"
+                style="position:absolute; right:6px; top:50%; transform:translateY(-50%); padding:0 2px;"
+                aria-label="Clear filter"
+                title="Clear filter (Esc)"
+              >×</button>
+            </div>
+            <button
+              type="button"
+              onclick="refreshDriveResources()"
+              class="btn-tech-outline !py-1.5 !px-2.5 text-xs shrink-0"
+              title="Re-sync every folder from Google Drive"
+            >
+              ↻ Sync
+            </button>
+          </div>
+          <div class="flex items-center justify-between gap-2 flex-wrap font-mono-tech text-[10px] text-[#436152]">
+            <span class="flex items-center gap-1.5 flex-wrap">
+              <span>FILES <strong id="gdrive-total-files-count" class="text-[#0c1f17]">0</strong></span>
+              <span class="text-[#9fc2af]">/</span>
+              <span>FOLDERS <strong id="gdrive-total-folders-count" class="text-[#0c1f17]">0</strong></span>
+            </span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="flex items-center gap-1" title="Sort order inside every folder">
+                <span class="uppercase">Sort</span>
+                <select
+                  id="gdrive-drive-sort"
+                  onchange="setDriveSortMode(this.value)"
+                  class="tech-input !py-0.5 !px-1 !text-[10px]"
+                  style="width:auto;"
+                  aria-label="Sort drive entries"
+                >
+                  <option value="folder">FOLDERS FIRST</option>
+                  <option value="name">NAME</option>
+                  <option value="newest">NEWEST</option>
+                  <option value="size">SIZE</option>
+                </select>
+              </label>
+              <button type="button" onclick="setAllDriveFoldersExpanded(true)" class="hover:text-[#047857] underline">Expand All</button>
+              <span>•</span>
+              <button type="button" onclick="setAllDriveFoldersExpanded(false)" class="hover:text-[#047857] underline">Collapse All</button>
+            </div>
+          </div>
+          <div id="gdrive-tree-status" class="font-mono-tech text-[10px] text-[#047857]"></div>
+        </div>
+
+        <!-- Expandable Folders Accordion List (page-scrolled: no nested scroll trap) -->
+        <div
+          id="gdrive-folders-container"
+          class="flex flex-col gap-2.5 pr-0.5"
+          tabindex="0"
+          role="region"
+          aria-label="Google Drive folders and files"
+        >
+          <!-- Populated dynamically by renderDriveFoldersTree() -->
+        </div>
+
+        <!-- Owner Configuration Footer -->
+        <div class="border-t border-[#c5ded0] pt-3 flex flex-col gap-2">
+          <div class="flex items-center justify-between font-mono-tech text-[11px] text-[#436152]">
+            <span id="gdrive-last-sync-text">Last synced: --:--</span>
+            <span class="owner-lock-badge text-[10px] text-[#92400e] bg-[#fef3c7] px-1.5 py-0.5 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> READ-ONLY</span>
+          </div>
+          <button
+            type="button"
+            id="gdrive-config-btn"
+            onclick="openModal('gdrive-config-modal')"
+            class="btn-tech-outline owner-input w-full justify-center"
+            disabled
+          >
+            <svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5V3.5M8 12.5V14.5M1.5 8H3.5M12.5 8H14.5M3.4 3.4L4.8 4.8M11.2 11.2L12.6 12.6M12.6 3.4L11.2 4.8M4.8 11.2L3.4 12.6"/></svg> Configure Google Drive Folders &amp; API Key
+          </button>
+        </div>
+      </aside>
+
+      <!-- Right Column: Integrated In-Website PDF & Document Reader (/02) -->
+      <div id="gdrive-reader-panel" class="lg:col-span-7 xl:col-span-8 cmd-frame p-3.5 sm:p-5 flex flex-col gap-3.5 sm:gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Reader Header & External Drive Actions (Mobile-Responsive Stack) -->
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-[#c5ded0] pb-3.5">
+          <div class="w-full sm:flex-1 min-w-0">
+            <div class="flex items-center justify-between sm:justify-start gap-2 mb-1">
+              <span id="gdrive-reader-badge" class="tech-badge badge-green">DOC / SHEET / SLIDE READER</span>
+              <span class="font-mono-tech text-xs text-[#56735f] sm:hidden">/02</span>
+            </div>
+            <h2 id="gdrive-reader-title" class="text-base sm:text-lg font-bold tracking-tight text-[#0c1f17] break-words leading-snug">
+              Select a file from the folder tree to read
+            </h2>
+            <p id="gdrive-reader-meta" class="font-mono-tech text-[11px] sm:text-xs text-[#436152] mt-1 break-words">
+              pdf • word (.doc/.docx) • excel (.xls/.xlsx/.csv) • powerpoint (.ppt/.pptx) • google docs / sheets / slides
+            </p>
+          </div>
+
+          <div class="w-full sm:w-auto flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 sm:pt-0.5">
+            <button
+              type="button"
+              onclick="toggleDriveReaderHeight()"
+              id="gdrive-expand-View-btn"
+              class="btn-tech-outline !py-1.5 !px-2.5 text-[11px] sm:text-xs flex-1 sm:flex-initial justify-center"
+              title="Toggle tall reader mode"
+            >
+              ⤢ Tall View
+            </button>
+            <a
+              id="gdrive-download-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-tech-outline !py-1.5 !px-2.5 text-[11px] sm:text-xs flex-1 sm:flex-initial justify-center hidden"
+            >
+              ↓ Download
+            </a>
+            <a
+              id="gdrive-external-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-chamfer !py-1.5 !px-3 text-[11px] sm:text-xs w-full sm:w-auto justify-center hidden"
+            >
+              Open in Google Drive →
+            </a>
+            <span class="font-mono-tech text-xs text-[#56735f] hidden sm:inline ml-1">/02</span>
+          </div>
+        </div>
+
+        <!-- Viewer source switcher (v1.1.0): Drive preview · Office Online · Google Viewer · in-app -->
+        <div id="gdrive-reader-sources" class="hidden flex-wrap items-center gap-1.5"></div>
+
+        <!-- Embedded PDF / File Reader Viewport -->
+        <div id="gdrive-reader-viewport" class="w-full h-[460px] sm:h-[680px] tech-grid-bg border border-[#c5ded0] relative overflow-hidden flex items-center justify-center transition-all duration-200">
+          <!-- Default Empty State -->
+          <div id="gdrive-reader-empty" class="p-8 text-center max-w-md flex flex-col items-center gap-2">
+            <span class="tech-badge badge-neutral">NO DOCUMENT LOADED</span>
+            <h3 class="text-base font-bold text-[#0c1f17] mt-1">Integrated Document Reader</h3>
+            <p class="font-mono-tech text-xs text-[#436152]">
+              Pick any file in the Google Drive tree on the left. PDFs, Word, Excel, PowerPoint and Google Docs / Sheets / Slides all open here — switch the viewer source above the frame (Drive preview, Office Online, Google Viewer or in-app rendering) when one provider cannot display a file.
+            </p>
+          </div>
+
+          <!-- In-app renderer host (v1.1.0): docx → styled HTML, xlsx/csv → tables, pptx → outline -->
+          <div id="gdrive-native-host" class="hidden w-full h-full overflow-auto bg-white"></div>
+
+          <!-- Embedded provider iframe: Drive preview, Google Docs/Sheets/Slides or Office Online -->
+
+          <iframe
+            id="gdrive-pdf-iframe"
+            src="about:blank"
+            class="hidden w-full h-full border-0 bg-white"
+            allow="autoplay; fullscreen"
+            title="Integrated document reader"
+          ></iframe>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           EDUCATIONAL YOUTUBE PLAYLISTS & VIDEOS VAULT (ANY CHANNEL)
+           ========================================== -->
+      <div class="lg:col-span-12 border-t-2 border-[#87b39b] pt-2 mt-2">
+        <div class="section-tag"><span class="diamond">◆</span> EDUCATIONAL YOUTUBE PLAYLISTS &amp; LECTURE ARCHIVE</div>
+      </div>
+
+      <div class="lg:col-span-12 cmd-frame p-4 sm:p-5 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Section Header -->
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-[#c5ded0] pb-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">YouTube Educational Playlists &amp; Videos</h2>
+              <span class="tech-badge badge-red"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M4.5 3L12.5 8L4.5 13V3Z"/></svg> YOUTUBE EMBED // ANY CHANNEL</span>
+              <span class="font-mono-tech text-xs text-[#56735f]">/06B</span>
+            </div>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">
+              curate educational playlists or standalone lectures from any YouTube channel • watch directly inside autumn or open on YouTube
+            </p>
+          </div>
+          <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-0.5 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> SIGN IN TO ADD</span>
+        </div>
+
+        <!-- Add YouTube Playlist / Video Form (Owner Only) -->
+        <div class="my-4 p-3.5 bg-[#eff8f2] border border-[#c5ded0]">
+          <div class="section-tag mb-2.5"><span class="diamond">◆</span> ADD EDUCATIONAL YOUTUBE PLAYLIST OR VIDEO</div>
+          <form id="add-yt-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end">
+            <div class="lg:col-span-3">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="yt-title-input">1. Title / Course Name</label>
+              <input type="text" id="yt-title-input" placeholder="e.g., MIT 18.06 Linear Algebra / 3Blue1Brown Calculus" class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+            <div class="lg:col-span-4">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="yt-url-input">2. YouTube Playlist or Video URL / ID</label>
+              <input type="text" id="yt-url-input" placeholder="https://www.youtube.com/playlist?list=PL... or watch?v=..." class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="yt-category-input">3. Subject Tag</label>
+              <select id="yt-category-input" class="tech-input owner-input !py-1.5 text-xs" disabled>
+                <option value="MATH">MATH</option>
+                <option value="PHYSICS">PHYSICS</option>
+                <option value="CS / AI">CS / AI</option>
+                <option value="CHEMISTRY">CHEMISTRY</option>
+                <option value="COMPETITION">COMPETITION</option>
+                <option value="GENERAL">GENERAL</option>
+              </select>
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="yt-channel-input">4. Channel / Notes (Opt)</label>
+              <input type="text" id="yt-channel-input" placeholder="e.g., MIT OpenCourseWare" class="tech-input owner-input !py-1.5 text-xs" disabled>
+            </div>
+            <div class="lg:col-span-1">
+              <button type="submit" class="btn-chamfer owner-input w-full !py-1.5 !px-3 text-xs" disabled>
+                + Add
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Split View: Left Playlist/Video Directory + Right Embedded YouTube Player -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start mt-2">
+          <!-- Left Directory (5 cols) -->
+          <div class="lg:col-span-5 border border-[#87b39b] bg-white flex flex-col justify-between min-w-0">
+            <div>
+              <div class="p-2.5 bg-[#e8f3ec] border-b border-[#87b39b] flex items-center justify-between gap-2">
+                <span class="font-mono-tech text-xs font-bold uppercase text-[#0c1f17]">SAVED PLAYLISTS &amp; VIDEOS (<span id="yt-total-count">0</span>)</span>
+                <input type="text" id="yt-search-input" oninput="renderYoutubeResources()" placeholder="Filter..." class="tech-input !w-36 !py-1 !px-2 !text-xs !bg-white">
+              </div>
+              <div id="yt-resources-list" class="divide-y divide-[#e2efe8] max-h-[520px] overflow-y-auto">
+                <!-- Populated by renderYoutubeResources() -->
+              </div>
+            </div>
+
+            <!-- Hidden table for Universal Export Engine compatibility -->
+            <table id="yt-export-hidden-table" class="hidden">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Subject</th>
+                  <th>Channel / Notes</th>
+                  <th>YouTube URL</th>
+                </tr>
+              </thead>
+              <tbody id="yt-export-hidden-tbody"></tbody>
+            </table>
+
+            <div class="table-export-bar px-3 pb-2">
+              <span>EXPORT YT VAULT:</span>
+              <div class="flex flex-wrap items-center gap-1">
+                <button type="button" onclick="exportHtmlTableData('yt-export-hidden-table', 'youtube-educational-vault', 'csv')" class="btn-export-tag">↓ CSV</button>
+                <button type="button" onclick="exportHtmlTableData('yt-export-hidden-table', 'youtube-educational-vault', 'md')" class="btn-export-tag">↓ MD</button>
+                <button type="button" onclick="exportHtmlTableData('yt-export-hidden-table', 'youtube-educational-vault', 'json')" class="btn-export-tag">↓ JSON</button>
+                <button type="button" onclick="exportHtmlTableData('yt-export-hidden-table', 'youtube-educational-vault', 'copy')" class="btn-export-tag">⎘ COPY MD</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Embedded Player (7 cols) -->
+          <div id="yt-player-panel" class="lg:col-span-7 border border-[#87b39b] bg-white p-3.5 sm:p-4 flex flex-col gap-3 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 border-b border-[#c5ded0] pb-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span id="yt-player-badge" class="tech-badge badge-red"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M4.5 3L12.5 8L4.5 13V3Z"/></svg> YOUTUBE PLAYER</span>
+                  <span id="yt-player-cat-badge" class="tech-badge badge-green hidden">SUBJECT</span>
+                </div>
+                <h3 id="yt-player-title" class="text-base sm:text-lg font-bold text-[#0c1f17] mt-1 break-words">
+                  Select a playlist or video from the left to watch
+                </h3>
+                <p id="yt-player-meta" class="font-mono-tech text-xs text-[#436152] mt-0.5 break-words">
+                  supports full playlists (with built-in episode switcher) and individual lectures
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  id="yt-switch-host-btn"
+                  onclick="toggleYoutubeEmbedHostMode()"
+                  class="btn-tech-outline !py-1.5 !px-2.5 !text-[11px] hidden"
+                  title="Switch between Standard YouTube and Privacy-Enhanced No-Cookie Player"
+                >
+                  ⇄ Switch Player Mode
+                </button>
+                <a
+                  id="yt-external-link"
+                  href="#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-chamfer !py-1.5 !px-3 text-xs hidden"
+                >
+                  Open on YouTube →
+                </a>
+              </div>
+            </div>
+
+            <!-- Warning banner if opened as local file:// (YouTube blocks file:// embeds with Error 153) -->
+            <div id="yt-file-protocol-warning" class="hidden p-2.5 bg-[#fef3c7] border border-[#fcd34d] font-mono-tech text-[11px] text-[#92400e]">
+              <strong><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M8 2L14.5 13.5H1.5L8 2ZM8 6.5V9.8M8 11.5V12.2"/></svg> LOCAL FILE NOTICE:</strong> You are opening <code>index.html</code> via <code>file://</code>. YouTube blocks embedded players on <code>file://</code> with <strong>Error 153</strong> because no HTTP Referer header is sent. Run via VS Code <strong>Live Server</strong> (<code>http://localhost</code>) or your deployed site URL to play videos inline.
+            </div>
+
+            <div class="w-full aspect-video tech-grid-bg border border-[#c5ded0] relative overflow-hidden flex items-center justify-center bg-[#0c1f17]">
+              <div id="yt-player-empty" class="p-6 text-center max-w-md flex flex-col items-center gap-2 bg-[#f9fdfb] border border-[#c5ded0]">
+                <span class="tech-badge badge-neutral">NO STREAM LOADED</span>
+                <p class="font-mono-tech text-xs text-[#436152] mt-1">
+                  Click any saved educational playlist or video on the left to load the embedded player here.
+                </p>
+              </div>
+              <iframe
+                id="yt-embed-iframe"
+                src="about:blank"
+                class="hidden w-full h-full border-0"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                title="Educational YouTube Player"
+              ></iframe>
+            </div>
+
+            <!-- Auto-Resolved Playlist Episodes Strip (Prevents /embed/videoseries Error 153) -->
+            <div id="yt-episodes-box" class="hidden border border-[#c5ded0] bg-[#eff8f2] p-2.5">
+              <div class="flex items-center justify-between gap-2 mb-1.5 font-mono-tech text-[10px] text-[#436152]">
+                <span class="font-bold text-[#047857]">◆ PLAYLIST EPISODES (CLICK TO PLAY DIRECTLY)</span>
+                <span id="yt-episodes-status">Loading episodes...</span>
+              </div>
+              <div id="yt-episodes-list" class="flex flex-col gap-1 max-h-[175px] overflow-y-auto pr-1"></div>
+            </div>
+          </div>
+        </div>
+      </div>

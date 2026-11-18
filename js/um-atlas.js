@@ -1583,9 +1583,9 @@
     } else {
       const scheduleAtlasLoad = () => {
         if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(() => loadUmSearchIndex(), { timeout: 3500 });
+          requestIdleCallback(() => loadUmSearchIndex(), { timeout: 6500 });
         } else {
-          setTimeout(() => loadUmSearchIndex(), 2000);
+          setTimeout(() => loadUmSearchIndex(), 4500);
         }
       };
       if (document.readyState === 'complete') scheduleAtlasLoad();

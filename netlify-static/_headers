@@ -16,5 +16,8 @@
 /js/*
   Cache-Control: public, max-age=31536000, immutable
 
+/fragments/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /data/*.json
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800

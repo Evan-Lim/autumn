@@ -1,0 +1,137 @@
+<!-- Compact 4th-Navbar-Style Next-Class Commute & Walk Countdown Strip -->
+      <div id="calendar-commute-strip" class="lg:col-span-12 m3-fourth-strip"></div>
+
+      <!-- Left Sidebar: Live Radar & Sync Telemetry (/01) -->
+      <aside class="lg:col-span-4 xl:col-span-3 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex items-start justify-between border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Event Telemetry</h2>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">google calendar live feed</p>
+            <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+              <span id="gcal-sync-badge" class="tech-badge badge-green">AUTO-SYNC // 60S</span>
+              <span class="tech-badge badge-blue">EVENTS ONLY</span>
+            </div>
+          </div>
+          <span class="font-mono-tech text-xs text-[#56735f] shrink-0">/01</span>
+        </div>
+
+        <!-- Ongoing & Upcoming 60-Min Radar Box -->
+        <div>
+          <div class="section-tag mb-2"><span class="diamond">◆</span> IMMEDIATE RADAR (NOW &amp; NEXT 60M)</div>
+          <div id="cal-sidebar-radar" class="tech-grid-bg border border-[#c5ded0] p-3 flex flex-col gap-2">
+            <div class="font-mono-tech text-xs text-[#56735f] text-center py-2">No ongoing or upcoming events within 60m.</div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="metric-box !p-3">
+            <div class="font-mono-tech text-[10px] uppercase text-[#436152]">TODAY'S EVENTS</div>
+            <div id="cal-stat-today" class="font-mono-tech text-2xl font-bold text-[#0c1f17] mt-0.5">0</div>
+          </div>
+          <div class="metric-box accent-blue !p-3">
+            <div class="font-mono-tech text-[10px] uppercase text-[#436152]">NEXT 7 DAYS</div>
+            <div id="cal-stat-week" class="font-mono-tech text-2xl font-bold text-[#0c1f17] mt-0.5">0</div>
+          </div>
+        </div>
+
+        <!-- Event Priority Colour Legend -->
+        <div class="border-t border-[#c5ded0] pt-3">
+          <div class="section-tag mb-2"><span class="diamond">◆</span> PRIORITY COLOUR KEY</div>
+          <div class="flex flex-col gap-1.5 font-mono-tech text-[10px]">
+            <div class="flex items-center justify-between px-2 py-1 bg-[#fee2e2] border border-[#fca5a5] text-[#991b1b]">
+              <span class="font-bold">◆ RED // HIGH</span>
+              <span>Class / Competition</span>
+            </div>
+            <div class="flex items-center justify-between px-2 py-1 bg-[#fef3c7] border border-[#fcd34d] text-[#92400e]">
+              <span class="font-bold">▲ YELLOW // MEDIUM</span>
+              <span>Medium Priority</span>
+            </div>
+            <div class="flex items-center justify-between px-2 py-1 bg-[#dcfce7] border border-[#86efac] text-[#065f46]">
+              <span class="font-bold">● GREEN // DEFAULT</span>
+              <span>Low Priority / Own Plans</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manually Included Months Manager (Beyond ±2M Auto Window) -->
+        <div class="border-t border-[#c5ded0] pt-3">
+          <div class="section-tag mb-1.5"><span class="diamond">◆</span> DB WINDOW: ±2 MONTHS AUTO</div>
+          <p class="font-mono-tech text-[10px] text-[#56735f] mb-2">
+            Supabase auto-retains events within ±2 months of today. Months outside ±2M can be manually pinned below:
+          </p>
+          <div id="gcal-manual-months-list" class="flex flex-wrap gap-1.5">
+            <!-- Populated dynamically by renderManualMonthsBadges() -->
+          </div>
+        </div>
+
+        <!-- Sync Controls & Owner Source Link -->
+        <div class="border-t border-[#c5ded0] pt-3 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono-tech text-[11px] text-[#436152]" id="gcal-last-sync-text">Last synced: --:--</span>
+            <button onclick="fetchGoogleCalendarEvents(true)" class="btn-tech-outline py-1 px-2 text-[11px]">
+              ↻ Sync Now
+            </button>
+          </div>
+          <p class="font-mono-tech text-[11px] text-[#56735f]">
+            Click any event to inspect details or change its priority colour (Red / Yellow / Green).
+          </p>
+          <!-- Owner-only button to save/update Calendar ID & API Key -->
+          <button id="gcal-config-btn" onclick="openModal('gcal-config-modal')" class="btn-tech-outline owner-input w-full justify-center mt-1" disabled>
+            <svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5V3.5M8 12.5V14.5M1.5 8H3.5M12.5 8H14.5M3.4 3.4L4.8 4.8M11.2 11.2L12.6 12.6M12.6 3.4L11.2 4.8M4.8 11.2L3.4 12.6"/></svg> Configure Google Calendar Source
+          </button>
+        </div>
+      </aside>
+
+      <!-- Right Main Multi-View Calendar (/02) -->
+      <div class="lg:col-span-8 xl:col-span-9 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Top Controls: View Switcher (Default: Schedule) + Date Nav -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#c5ded0] pb-3.5">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Master Schedule &amp; Calendar</h2>
+              <span class="font-mono-tech text-xs text-[#56735f]">/02</span>
+            </div>
+            <p id="cal-range-label" class="font-mono-tech text-xs text-[#047857] font-semibold mt-0.5">Loading schedule...</p>
+          </div>
+
+          <!-- View Toggles & Navigation -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Navigation Buttons -->
+            <div class="flex items-center gap-1 bg-[#e8f3ec] p-1 border border-[#c5ded0]">
+              <button onclick="navigateCalendarView(-1)" aria-label="Previous calendar period" class="btn-tech-outline !px-2.5 !py-1">←</button>
+              <button onclick="navigateCalendarView(0)" class="btn-tech-outline !px-2.5 !py-1">Today</button>
+              <button onclick="navigateCalendarView(1)" aria-label="Next calendar period" class="btn-tech-outline !px-2.5 !py-1">→</button>
+            </div>
+
+            <!-- Multi-View Switcher (Schedule is default, Timeline is structured hourly grid) -->
+            <div class="flex flex-wrap items-center gap-1 bg-[#e8f3ec] p-1 border border-[#c5ded0]">
+              <button onclick="setCalendarViewMode('schedule')" id="cal-view-btn-schedule" class="btn-tech-outline active-view !py-1 !px-2.5" title="Default Chronological Agenda">
+                Schedule
+              </button>
+              <button onclick="setCalendarViewMode('timeline')" id="cal-view-btn-timeline" class="btn-tech-outline !py-1 !px-2.5" title="Structured Hourly Timeline (Auto-splits overlaps)">
+                Timeline
+              </button>
+              <button onclick="setCalendarViewMode('month')" id="cal-view-btn-month" class="btn-tech-outline !py-1 !px-2.5">
+                Month
+              </button>
+              <button onclick="setCalendarViewMode('week')" id="cal-view-btn-week" class="btn-tech-outline !py-1 !px-2.5">
+                Week
+              </button>
+              <button onclick="setCalendarViewMode('day')" id="cal-view-btn-day" class="btn-tech-outline !py-1 !px-2.5">
+                Day
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Calendar Viewport -->
+        <div id="calendar-main-viewport" class="min-h-[440px] min-w-0">
+          <!-- Populated dynamically by renderCalendarViewport() -->
+        </div>
+
+      </div>

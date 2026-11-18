@@ -1,0 +1,337 @@
+<!-- Left Column: Week Selector & Weekly Journal Archive (/01) -->
+      <aside class="lg:col-span-4 xl:col-span-3 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex items-start justify-between border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Weekly Journal</h2>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">weekly operational logs (mon–sun)</p>
+          </div>
+          <span class="font-mono-tech text-xs text-[#56735f] shrink-0">/01</span>
+        </div>
+
+        <div>
+          <label class="block font-mono-tech text-[11px] uppercase text-[#436152] mb-1" for="notes-date-picker">Jump to Week (Pick Any Date in Week)</label>
+          <input type="date" id="notes-date-picker" class="tech-input">
+        </div>
+
+        <div class="border-t border-[#c5ded0] pt-3 flex-1">
+          <div class="section-tag mb-2.5"><span class="diamond">◆</span> WEEKLY LOG ARCHIVE (<span id="notes-count">0</span>)</div>
+          <div id="notes-archive-list" class="flex flex-col gap-2 max-h-[420px] overflow-y-auto pr-1">
+            <!-- Populated by JS -->
+          </div>
+          <div class="table-export-bar mt-3">
+            <span>EXPORT ALL WEEKS:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="exportAllJournalEntries('md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportAllJournalEntries('csv')" class="btn-export-tag">↓ CSV</button>
+              <button type="button" onclick="exportAllJournalEntries('json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportAllJournalEntries('txt')" class="btn-export-tag">↓ TXT</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Column: Weekly Journal Editor & Reader (/02) -->
+      <div class="lg:col-span-8 xl:col-span-9 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="note-active-date-badge" class="tech-badge badge-green">WK // ----</span>
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Weekly Journal Entry</h2>
+            </div>
+            <p id="note-last-saved" class="font-mono-tech text-xs text-[#436152] mt-1">Select a week to view or record your weekly operational log.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="openStatCardModal('journal')" class="btn-tech-outline !py-1 !px-2.5 !text-[10px] !border-[#059669] !text-[#047857]">
+              ▣ Export Weekly Journal Stat Card
+            </button>
+            <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-1 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> READ-ONLY MODE</span>
+            <span class="font-mono-tech text-xs text-[#56735f]">/02</span>
+          </div>
+        </div>
+
+        <form id="note-editor-form" class="flex flex-col gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="md:col-span-3">
+              <label class="block font-mono-tech text-[11px] uppercase text-[#436152] mb-1" for="note-title-input">Weekly Headline / Key Theme</label>
+              <input type="text" id="note-title-input" placeholder="e.g., Week 44: Mechanics Mastery + Consistent 10k Steps..." class="tech-input owner-input" disabled>
+            </div>
+            <div>
+              <label class="block font-mono-tech text-[11px] uppercase text-[#436152] mb-1" for="note-mood-input">Week Status Tag</label>
+              <select id="note-mood-input" class="tech-input owner-input" disabled>
+                <option value="OPTIMAL">● OPTIMAL</option>
+                <option value="FOCUSED">◆ FOCUSED</option>
+                <option value="STANDARD">■ STANDARD</option>
+                <option value="RECOVERY">▲ RECOVERY</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono-tech text-[11px] uppercase text-[#436152]" for="gen-note-title-input">Weekly Log Content (Rich Text)</label>
+              <span id="note-word-count" class="font-mono-tech text-[11px] text-[#56735f]">0 words</span>
+            </div>
+
+            <!-- Rich Text Formatting Toolbar -->
+            <div class="rich-editor-toolbar">
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('bold')" class="rte-btn owner-input font-bold" title="Bold (Ctrl+B)" disabled>B</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('italic')" class="rte-btn owner-input italic" title="Italic (Ctrl+I)" disabled>I</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('underline')" class="rte-btn owner-input underline" title="Underline (Ctrl+U)" disabled>U</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('strikeThrough')" class="rte-btn owner-input line-through" title="Strikethrough" disabled>S</button>
+              <span class="text-[#9fc2af] mx-0.5 font-mono-tech text-xs">|</span>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('insertUnorderedList')" class="rte-btn owner-input" title="Bullet List" disabled>• List</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('insertOrderedList')" class="rte-btn owner-input" title="Numbered List" disabled>1. List</button>
+              <span class="text-[#9fc2af] mx-0.5 font-mono-tech text-xs">|</span>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatJournalDoc('removeFormat')" class="rte-btn owner-input text-[#436152]" title="Clear Formatting" disabled>Tx</button>
+            </div>
+
+            <!-- Rich Text Contenteditable Surface -->
+            <div id="note-content-editor"
+                 contenteditable="false"
+                 data-placeholder="Write your weekly reflections, study breakthroughs, competition prep notes, or observations for this week..."
+                 class="rich-editor-surface tech-grid-bg"></div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-[#c5ded0]">
+            <button type="button" id="delete-note-btn" class="btn-tech-outline owner-input text-[#b91c1c] border-[#fca5a5] hover:bg-[#fee2e2]" disabled>
+              Delete Weekly Entry
+            </button>
+            <button type="submit" class="btn-chamfer owner-input" disabled>
+              <span>▣</span> Save Weekly Journal
+            </button>
+          </div>
+
+          <div class="table-export-bar">
+            <span>EXPORT THIS WEEKLY JOURNAL:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="openStatCardModal('journal')" class="btn-export-tag !border-[#059669] !text-[#047857] font-bold">▣ STAT CARD (PNG/SVG)</button>
+              <button type="button" onclick="exportCurrentJournalEntry('md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportCurrentJournalEntry('txt')" class="btn-export-tag">↓ TXT</button>
+              <button type="button" onclick="exportCurrentJournalEntry('html')" class="btn-export-tag">↓ HTML</button>
+              <button type="button" onclick="exportCurrentJournalEntry('json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportCurrentJournalEntry('copy')" class="btn-export-tag">⎘ COPY MD</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- ==========================================
+           GENERAL NOTES & KNOWLEDGE ARCHIVE SECTION (BELOW DAILY JOURNAL)
+           ========================================== -->
+      <div class="lg:col-span-12 border-t-2 border-[#87b39b] pt-2 mt-2">
+        <div class="section-tag"><span class="diamond">◆</span> GENERAL NOTES &amp; REFERENCE ARCHIVE (NON-DATED)</div>
+      </div>
+
+      <!-- Left Column: General Notes List (/03) -->
+      <aside class="lg:col-span-4 xl:col-span-3 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex items-start justify-between border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">General Notes</h2>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">general info, ideas &amp; reference</p>
+          </div>
+          <span class="font-mono-tech text-xs text-[#56735f] shrink-0">/03</span>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button type="button" onclick="createNewGeneralNoteSlot()" class="btn-chamfer owner-input w-full justify-center !py-2 text-xs" disabled>
+            + New General Note
+          </button>
+          <input type="text" id="gen-notes-search" oninput="renderGeneralNotesArchive()" placeholder="Search general notes..." class="tech-input !py-1.5 text-xs">
+        </div>
+
+        <div class="border-t border-[#c5ded0] pt-3 flex-1">
+          <div class="section-tag mb-2.5"><span class="diamond">◆</span> SAVED GENERAL NOTES (<span id="gen-notes-count">0</span>)</div>
+          <div id="gen-notes-archive-list" class="flex flex-col gap-2 max-h-[420px] overflow-y-auto pr-1">
+            <!-- Populated by JS -->
+          </div>
+          <div class="table-export-bar mt-3">
+            <span>EXPORT ALL NOTES:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="exportAllGeneralNotes('md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportAllGeneralNotes('csv')" class="btn-export-tag">↓ CSV</button>
+              <button type="button" onclick="exportAllGeneralNotes('json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportAllGeneralNotes('txt')" class="btn-export-tag">↓ TXT</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Column: General Note Rich-Text Editor & Reader (/04) -->
+      <div class="lg:col-span-8 xl:col-span-9 cmd-frame p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#c5ded0] pb-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="gen-note-active-badge" class="tech-badge badge-blue">NEW NOTE</span>
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">General Note Entry</h2>
+            </div>
+            <p id="gen-note-last-saved" class="font-mono-tech text-xs text-[#436152] mt-1">Select a general note from the left or create a new entry.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-1 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> READ-ONLY MODE</span>
+            <span class="font-mono-tech text-xs text-[#56735f]">/04</span>
+          </div>
+        </div>
+
+        <form id="gen-note-editor-form" class="flex flex-col gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="md:col-span-3">
+              <label class="block font-mono-tech text-[11px] uppercase text-[#436152] mb-1" for="gen-note-title-input">Note Title / Topic</label>
+              <input type="text" id="gen-note-title-input" placeholder="e.g., Physics Formula Sheet, Competition Prep Links, Book Notes..." class="tech-input owner-input" required disabled>
+            </div>
+            <div>
+              <label class="block font-mono-tech text-[11px] uppercase text-[#436152] mb-1" for="gen-note-category-input">Category Tag</label>
+              <select id="gen-note-category-input" class="tech-input owner-input" disabled>
+                <option value="GENERAL">◆ GENERAL</option>
+                <option value="TERMINAL">⌘ TERMINAL (DAILY SCRATCHPAD)</option>
+                <option value="STUDY">● STUDY</option>
+                <option value="COMPETITION">■ COMPETITION</option>
+                <option value="RUNNING">▲ RUNNING</option>
+                <option value="REFERENCE">▣ REFERENCE</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-mono-tech text-[11px] uppercase text-[#436152]" for="portfolio-category-input">General Note Content (Rich Text)</label>
+              <span id="gen-note-word-count" class="font-mono-tech text-[11px] text-[#56735f]">0 words</span>
+            </div>
+
+            <!-- Rich Text Formatting Toolbar for General Notes -->
+            <div class="rich-editor-toolbar">
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('bold')" class="rte-btn owner-input font-bold" title="Bold (Ctrl+B)" disabled>B</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('italic')" class="rte-btn owner-input italic" title="Italic (Ctrl+I)" disabled>I</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('underline')" class="rte-btn owner-input underline" title="Underline (Ctrl+U)" disabled>U</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('strikeThrough')" class="rte-btn owner-input line-through" title="Strikethrough" disabled>S</button>
+              <span class="text-[#9fc2af] mx-0.5 font-mono-tech text-xs">|</span>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('insertUnorderedList')" class="rte-btn owner-input" title="Bullet List" disabled>• List</button>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('insertOrderedList')" class="rte-btn owner-input" title="Numbered List" disabled>1. List</button>
+              <span class="text-[#9fc2af] mx-0.5 font-mono-tech text-xs">|</span>
+              <button type="button" onmousedown="event.preventDefault()" onclick="formatGeneralNoteDoc('removeFormat')" class="rte-btn owner-input text-[#436152]" title="Clear Formatting" disabled>Tx</button>
+            </div>
+
+            <!-- Rich Text Contenteditable Surface for General Notes -->
+            <div id="gen-note-content-editor"
+                 contenteditable="false"
+                 data-placeholder="Write general notes, reference checklists, or long-term information here..."
+                 class="rich-editor-surface tech-grid-bg"></div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-[#c5ded0]">
+            <button type="button" id="delete-gen-note-btn" class="btn-tech-outline owner-input text-[#b91c1c] border-[#fca5a5] hover:bg-[#fee2e2]" disabled>
+              Delete General Note
+            </button>
+            <button type="submit" class="btn-chamfer owner-input" disabled>
+              <span>▣</span> Save General Note
+            </button>
+          </div>
+
+          <div class="table-export-bar">
+            <span>EXPORT THIS GENERAL NOTE:</span>
+            <div class="flex flex-wrap items-center gap-1">
+              <button type="button" onclick="exportCurrentGeneralNote('md')" class="btn-export-tag">↓ MD</button>
+              <button type="button" onclick="exportCurrentGeneralNote('txt')" class="btn-export-tag">↓ TXT</button>
+              <button type="button" onclick="exportCurrentGeneralNote('html')" class="btn-export-tag">↓ HTML</button>
+              <button type="button" onclick="exportCurrentGeneralNote('json')" class="btn-export-tag">↓ JSON</button>
+              <button type="button" onclick="exportCurrentGeneralNote('copy')" class="btn-export-tag">⎘ COPY MD</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- ==========================================
+           COMPETITIONS / ACTIVITIES & POSITIONS LEDGERS (BELOW GENERAL NOTES)
+           ========================================== -->
+      <div class="lg:col-span-12 border-t-2 border-[#87b39b] pt-2 mt-2">
+        <div class="section-tag"><span class="diamond">◆</span> COMPETITIONS / ACTIVITIES &amp; LEADERSHIP POSITIONS LEDGERS</div>
+      </div>
+
+      <div class="lg:col-span-12 cmd-frame p-4 sm:p-5 min-w-0">
+        <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+
+        <!-- Section Header -->
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-[#c5ded0] pb-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-bold tracking-tight text-[#0c1f17]">Competitions, Activities &amp; Positions Ledgers</h2>
+              <span class="tech-badge badge-green">PORTFOLIO RECORDS</span>
+              <span class="font-mono-tech text-xs text-[#56735f]">/05</span>
+            </div>
+            <p class="font-mono-tech text-xs text-[#436152] mt-0.5">
+              dedicated tables for competitions/activities and leadership positions • supports single-day dates or multi-month durations
+            </p>
+          </div>
+          <span class="owner-lock-badge font-mono-tech text-[10px] text-[#92400e] bg-[#fef3c7] px-2 py-0.5 border border-[#fcd34d]"><svg class="svg-wire" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V4.8C5.5 3.4 6.6 2.3 8 2.3C9.4 2.3 10.5 3.4 10.5 4.8V7"/></svg> SIGN IN TO LOG</span>
+        </div>
+
+        <!-- Entry Form (Owner Only) -->
+        <div class="my-4 p-3.5 bg-[#eff8f2] border border-[#c5ded0]">
+          <div class="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
+            <div class="section-tag"><span class="diamond">◆</span> LOG COMPETITION / ACTIVITY OR POSITION</div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="tech-badge bg-white text-[#0c1f17] border-[#c5ded0]">STANDARD = WHITE</span>
+              <span class="tech-badge bg-[#fef08a] text-[#0c1f17] border-[#fde047]">HIGHLIGHT = YELLOW</span>
+              <span class="tech-badge bg-[#bbf7d0] text-[#064e3b] border-[#86efac]">VERIFIED = GREEN</span>
+            </div>
+          </div>
+
+          <form id="add-portfolio-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-end">
+            <!-- Target Table Selector -->
+            <div class="lg:col-span-2">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="portfolio-category-input">Target Table</label>
+              <select id="portfolio-category-input" onchange="handlePortfolioCategoryChange()" class="tech-input owner-input !py-1.5 text-xs" disabled>
+                <option value="COMPETITION">COMPETITIONS / ACTIVITIES</option>
+                <option value="POSITION">POSITIONS / ROLES</option>
+              </select>
+            </div>
+
+            <!-- 1. Competition/Activity Name OR Position/Organization -->
+            <div class="lg:col-span-3">
+              <label id="portfolio-title-label" class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="portfolio-title-input">1. Competition / Activity</label>
+              <input type="text" id="portfolio-title-input" placeholder="e.g., National Physics Olympiad" class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+
+            <!-- 2. Date (Single Day or Any Duration) -->
+            <div class="lg:col-span-3">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="portfolio-date-input">2. Date / Duration</label>
+              <input type="text" id="portfolio-date-input" placeholder="e.g., 14/5/2026 or Mar – Aug 2026" class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+
+            <!-- 3. Results / Position -->
+            <div class="lg:col-span-2">
+              <label id="portfolio-result-label" class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="portfolio-result-input">3. Results / Position</label>
+              <input type="text" id="portfolio-result-input" placeholder="e.g., Gold Medal / 1st Place" class="tech-input owner-input !py-1.5 text-xs" required disabled>
+            </div>
+
+            <!-- Row Style -->
+            <div class="lg:col-span-1">
+              <label class="block font-mono-tech text-[10px] uppercase text-[#436152] mb-1" for="portfolio-style-input">Highlight</label>
+              <select id="portfolio-style-input" class="tech-input owner-input !py-1.5 !px-1.5 text-xs" disabled>
+                <option value="STANDARD">White</option>
+                <option value="THRESHOLD">Yellow</option>
+                <option value="EASY">Green</option>
+              </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="lg:col-span-1">
+              <button type="submit" class="btn-chamfer owner-input w-full !py-1.5 !px-3 text-xs" disabled>
+                + Add
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Two Dedicated Tables: 1. Competitions/Activities & 2. Positions -->
+        <div id="portfolio-tables-container" class="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-4">
+          <!-- Populated dynamically by renderPortfolioTables() -->
+        </div>
+      </div>

@@ -1,6 +1,6 @@
 [build]
   publish = "."
-  command = "echo 'Static multi-file minified build ready (index.html, css/, js/, data/)'"
+  command = "echo 'Static multi-file minified build ready (index.html, css/, js/, fragments/, data/)'"
 
 [[headers]]
   for = "/*"
@@ -27,6 +27,11 @@
 
 [[headers]]
   for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/fragments/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
