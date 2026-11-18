@@ -689,17 +689,21 @@ async function flushTerminalToGeneralNote(showManualToast = false) {
 
 async function openTodayTerminalInNotesTab() {
   await flushTerminalToGeneralNote(false);
-  switchTab('notes');
+  await switchTab('notes');
   const todayNote = findTodayTerminalGeneralNote();
-  if (todayNote) {
+  if (todayNote && typeof selectGeneralNote === 'function') {
     selectGeneralNote(todayNote.id);
   } else {
-    document.getElementById('gen-note-active-badge').textContent = 'TERMINAL';
-    document.getElementById('gen-note-title-input').value = getTodayTerminalNoteTitle();
-    document.getElementById('gen-note-category-input').value = 'TERMINAL';
+    const activeBadge = document.getElementById('gen-note-active-badge');
+    const titleIn = document.getElementById('gen-note-title-input');
+    const catIn = document.getElementById('gen-note-category-input');
+    const editorEl = document.getElementById('gen-note-content-editor');
     const textarea = document.getElementById('terminal-scratchpad-textarea');
-    document.getElementById('gen-note-content-editor').innerHTML = plainTerminalTextToHtml(textarea ? textarea.value : '');
-    updateGeneralNoteWordCount();
+    if (activeBadge) activeBadge.textContent = 'TERMINAL';
+    if (titleIn) titleIn.value = getTodayTerminalNoteTitle();
+    if (catIn) catIn.value = 'TERMINAL';
+    if (editorEl) editorEl.innerHTML = plainTerminalTextToHtml(textarea ? textarea.value : '');
+    if (typeof updateGeneralNoteWordCount === 'function') updateGeneralNoteWordCount();
   }
   const genForm = document.getElementById('gen-note-editor-form');
   if (genForm) genForm.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -2433,6 +2433,18 @@ async function fetchGoogleCalendarEvents(showManualFeedback = false) {
     if (typeof renderManualMonthsBadges === "function") renderManualMonthsBadges();
   }
 
+  const setGCalSyncState = (badgeClass, badgeText, syncMsg) => {
+    window.__lastGCalSyncState = { badgeClass, badgeText, syncMsg };
+    if (badgeEl) {
+      badgeEl.className = badgeClass;
+      badgeEl.textContent = badgeText;
+    }
+    if (syncMsg) {
+      const lastSyncEl = document.getElementById('gcal-last-sync-text');
+      if (lastSyncEl) lastSyncEl.textContent = syncMsg;
+    }
+  };
+
   if (!GOOGLE_API_KEY || !GOOGLE_CALENDAR_ID) {
     // Fallback to cached Supabase rows if API key isn't present
     if (Array.isArray(cachedRows) && cachedRows.length > 0) {
@@ -2448,11 +2460,9 @@ async function fetchGoogleCalendarEvents(showManualFeedback = false) {
         dateStr: r.date_str,
         priorityColor: r.priority_color || 'GREEN'
       })).sort((a, b) => a.start - b.start);
-      badgeEl.className = 'tech-badge badge-green';
-      badgeEl.textContent = 'CACHED // SUPABASE';
+      setGCalSyncState('tech-badge badge-green', 'CACHED // SUPABASE');
     } else {
-      badgeEl.className = 'tech-badge badge-amber';
-      badgeEl.textContent = 'AWAITING API KEY';
+      setGCalSyncState('tech-badge badge-amber', 'AWAITING API KEY');
       globalCalendarEvents = [];
     }
     updateNavbarAndRadarTelemetry();
@@ -2461,8 +2471,7 @@ async function fetchGoogleCalendarEvents(showManualFeedback = false) {
   }
 
   try {
-    badgeEl.className = 'tech-badge badge-blue';
-    badgeEl.textContent = 'SYNCING...';
+    setGCalSyncState('tech-badge badge-blue', 'SYNCING...');
 
     // 1. Fetch automatic ±2 months window (60 days before to 60 days after today)
     const { minDate, maxDate } = getAutoCalendarBounds(new Date());
@@ -2540,18 +2549,18 @@ async function fetchGoogleCalendarEvents(showManualFeedback = false) {
     // Sync & prune ±2M window in Supabase
     if (typeof pruneAndSyncCalendarCacheInSupabase === "function") await pruneAndSyncCalendarCacheInSupabase(globalCalendarEvents, showManualFeedback);
 
-    badgeEl.className = 'tech-badge badge-green';
-    badgeEl.textContent = 'LIVE // ±2M SYNCED';
-    document.getElementById('gcal-last-sync-text').textContent =
-      `Last synced: ${new Date().toLocaleTimeString('en-US', { hour12: false })}`;
+    setGCalSyncState(
+      'tech-badge badge-green',
+      'LIVE // ±2M SYNCED',
+      `Last synced: ${new Date().toLocaleTimeString('en-US', { hour12: false })}`
+    );
 
     if (showManualFeedback) {
       showToast('CALENDAR SYNCED', `Synced ${globalCalendarEvents.length} events (±2M window + ${manualCalendarMonths.length} manual month(s)).`);
     }
   } catch (err) {
     console.warn('Google Calendar sync error:', err.message);
-    badgeEl.className = 'tech-badge badge-red';
-    badgeEl.textContent = 'SYNC ERROR';
+    setGCalSyncState('tech-badge badge-red', 'SYNC ERROR');
     if (showManualFeedback) {
       showToast('CALENDAR SYNC ERROR', err.message, true);
     }
@@ -3484,9 +3493,9 @@ function handleGlobalSearch(rawQuery) {
           badgeClass: 'badge-green',
           title: file.name,
           subtitle: `Open in 06 // Resources PDF & Document Reader`,
-          action: () => {
-            switchTab('resources');
-            openDriveFileInReader(file.id);
+          action: async () => {
+            await switchTab('resources');
+            if (typeof openDriveFileInReader === 'function') openDriveFileInReader(file.id);
           }
         });
       }
@@ -3503,9 +3512,9 @@ function handleGlobalSearch(rawQuery) {
           badgeClass: 'badge-red',
           title: yt.title,
           subtitle: `${yt.resource_type || 'PLAYLIST'}${yt.channel_name ? ' • ' + yt.channel_name : ''}`,
-          action: () => {
-            switchTab('resources');
-            loadYoutubeResourceInPlayer(yt.id, true);
+          action: async () => {
+            await switchTab('resources');
+            if (typeof loadYoutubeResourceInPlayer === 'function') loadYoutubeResourceInPlayer(yt.id, true);
           }
         });
       }
@@ -3564,8 +3573,8 @@ function handleGlobalSearch(rawQuery) {
           badgeClass: doneNow ? 'badge-green' : 'badge-amber',
           title: habit.title,
           subtitle: `${doneNow ? 'Completed this cycle' : 'Pending this cycle'} • Streak: ${habit.streak_count || 0}`,
-          action: () => {
-            switchTab('tasks');
+          action: async () => {
+            await switchTab('tasks');
             const el = document.getElementById('habits-ledger-table');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
@@ -3583,9 +3592,9 @@ function handleGlobalSearch(rawQuery) {
         badgeClass: 'badge-blue',
         title: ev.title,
         subtitle: `${ev.dateStr} • ${formatEventTimeSpan(ev)}${ev.location ? ' •  ' + ev.location : ''}`,
-        action: () => {
-          switchTab('calendar');
-          openEventDetails(ev.id);
+        action: async () => {
+          await switchTab('calendar');
+          if (typeof openEventDetails === 'function') openEventDetails(ev.id);
         }
       });
     }
@@ -3601,9 +3610,9 @@ function handleGlobalSearch(rawQuery) {
         badgeClass: 'badge-green',
         title: note.title || `Daily Log (${note.date})`,
         subtitle: plain ? plain.slice(0, 90) : `Mood: ${note.mood || 'OPTIMAL'}`,
-        action: () => {
-          switchTab('notes');
-          selectJournalDate(note.date);
+        action: async () => {
+          await switchTab('notes');
+          if (typeof selectJournalDate === 'function') selectJournalDate(note.date);
         }
       });
     }
@@ -3619,9 +3628,9 @@ function handleGlobalSearch(rawQuery) {
         badgeClass: 'badge-blue',
         title: gn.title || 'Untitled General Note',
         subtitle: plain ? plain.slice(0, 90) : 'General reference note',
-        action: () => {
-          switchTab('notes');
-          selectGeneralNote(gn.id);
+        action: async () => {
+          await switchTab('notes');
+          if (typeof selectGeneralNote === 'function') selectGeneralNote(gn.id);
           const el = document.getElementById('gen-note-editor-form');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -3639,8 +3648,8 @@ function handleGlobalSearch(rawQuery) {
           badgeClass: item.category === 'POSITION' ? 'badge-blue' : 'badge-green',
           title: `${item.title} — ${item.result_str}`,
           subtitle: `Date/Duration: ${item.date_str}`,
-          action: () => {
-            switchTab('notes');
+          action: async () => {
+            await switchTab('notes');
             const el = document.getElementById('portfolio-tables-container');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
@@ -3659,11 +3668,11 @@ function handleGlobalSearch(rawQuery) {
         badgeClass: run.run_type === 'EASY' ? 'badge-green' : run.run_type === 'THRESHOLD' ? 'badge-amber' : 'badge-neutral',
         title: `${normalizePaceDisplay(run.pace_str)}/km (${run.time_str || '--:--'}) — ${run.location || run.run_type}`,
         subtitle: `Date: ${formatRunDateDMY(run.run_date)} • Type: ${run.run_type}`,
-        action: () => {
-          visibleRunCategories[run.category] = true;
-          updateRunCategoryToggleButtons();
-          renderRunningTables();
-          switchTab('tasks');
+        action: async () => {
+          await switchTab('tasks');
+          if (typeof visibleRunCategories === 'object' && visibleRunCategories) visibleRunCategories[run.category] = true;
+          if (typeof updateRunCategoryToggleButtons === 'function') updateRunCategoryToggleButtons();
+          if (typeof renderRunningTables === 'function') renderRunningTables();
           const el = document.getElementById('running-tables-container');
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }

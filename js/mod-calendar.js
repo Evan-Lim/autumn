@@ -1119,6 +1119,17 @@ function inspectCalendarDay(dateStr) {
 
 window.initCalendarModule = function () {
   if (typeof syncOwnerPermissions === "function") syncOwnerPermissions(document.getElementById("tab-calendar"));
+  if (window.__lastGCalSyncState) {
+    const badgeEl = document.getElementById("gcal-sync-badge");
+    if (badgeEl) {
+      badgeEl.className = window.__lastGCalSyncState.badgeClass;
+      badgeEl.textContent = window.__lastGCalSyncState.badgeText;
+    }
+    if (window.__lastGCalSyncState.syncMsg) {
+      const lastSyncEl = document.getElementById("gcal-last-sync-text");
+      if (lastSyncEl) lastSyncEl.textContent = window.__lastGCalSyncState.syncMsg;
+    }
+  }
   const gcalIdInput = document.getElementById("gcal-id-input");
   const gcalKeyInput = document.getElementById("gcal-key-input");
   const isOwner = Boolean(currentUser);
